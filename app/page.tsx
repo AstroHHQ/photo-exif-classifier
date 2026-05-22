@@ -10,6 +10,7 @@
 
 import UploadZone from "@/components/UploadZone";
 import PhotoGrid from "@/components/PhotoGrid";
+import StatsPanel from "@/components/StatsPanel";
 
 export default function Home() {
   return (
@@ -26,6 +27,9 @@ export default function Home() {
 
       {/* 上传区 */}
       <UploadZone />
+
+      {/* EXIF 统计面板 */}
+      <StatsPanel />
 
       {/* 照片瀑布流 */}
       <PhotoGrid />
