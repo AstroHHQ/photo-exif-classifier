@@ -9,6 +9,7 @@
  */
 
 import UploadZone from "@/components/UploadZone";
+import PhotoGrid from "@/components/PhotoGrid";
 
 export default function Home() {
   return (
@@ -25,6 +26,9 @@ export default function Home() {
 
       {/* 上传区 */}
       <UploadZone />
+
+      {/* 照片瀑布流 */}
+      <PhotoGrid />
     </div>
   );
 }
