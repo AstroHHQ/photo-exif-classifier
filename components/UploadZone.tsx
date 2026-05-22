@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 照片上传组件 —— 拖拽 + 点击上传。
+ * 照片上传组件 —— 拖拽 + 点击上传（支持多文件）。
  *
  * 状态机: idle → dragging → uploading → success | error
  *
@@ -36,30 +36,32 @@ type Status = "idle" | "dragging" | "uploading" | "success" | "error";
 
 export default function UploadZone() {
   const [status, setStatus] = useState<Status>("idle");
-  const [result, setResult] = useState<UploadResult | null>(null);
+  const [results, setResults] = useState<UploadResult[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
-  // 本地预览 URL（上传前）
-  const [preview, setPreview] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /** 处理文件上传 */
-  const uploadFile = useCallback(async (file: File) => {
-    // 校验类型
-    if (!file.type.startsWith("image/") || !ACCEPT.includes(file.type.replace("image/", "."))) {
+  /** 批量上传文件 */
+  const uploadFiles = useCallback(async (files: FileList | File[]) => {
+    if (files.length === 0) return;
+
+    // 过滤掉不支持的文件类型
+    const validFiles = Array.from(files).filter((f) => {
+      const ext = "." + f.type.replace("image/", "");
+      return f.type.startsWith("image/") && ACCEPT.includes(ext);
+    });
+
+    if (validFiles.length === 0) {
       setErrorMsg("只支持 JPG/JPEG/PNG 格式");
       setStatus("error");
       return;
     }
 
-    // 生成本地预览
-    const previewUrl = URL.createObjectURL(file);
-    setPreview(previewUrl);
     setStatus("uploading");
     setErrorMsg("");
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      validFiles.forEach((f) => formData.append("file", f));
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -72,19 +74,21 @@ export default function UploadZone() {
         throw new Error(data.error || "上传失败");
       }
 
-      setResult({
-        id: data.photo.id,
-        original_name: data.photo.original_name,
-        exif: {
-          cameraModel: data.photo.cameraModel,
-          lensModel: data.photo.lensModel,
-          focalLength: data.photo.focalLength,
-          iso: data.photo.iso,
-          aperture: data.photo.aperture,
-          shutterSpeed: data.photo.shutterSpeed,
-          dateTaken: data.photo.dateTaken,
-        },
-      });
+      setResults(
+        data.photos.map((p: any) => ({
+          id: p.id,
+          original_name: p.original_name,
+          exif: {
+            cameraModel: p.cameraModel,
+            lensModel: p.lensModel,
+            focalLength: p.focalLength,
+            iso: p.iso,
+            aperture: p.aperture,
+            shutterSpeed: p.shutterSpeed,
+            dateTaken: p.dateTaken,
+          },
+        }))
+      );
       setStatus("success");
     } catch (err: any) {
       setErrorMsg(err.message || "上传失败，请重试");
@@ -100,23 +104,20 @@ export default function UploadZone() {
   const handleDragLeave = () => setStatus("idle");
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) uploadFile(file);
+    uploadFiles(e.dataTransfer.files);
   };
 
   // 点击选择文件
   const handleClick = () => fileInputRef.current?.click();
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) uploadFile(file);
+    if (e.target.files) uploadFiles(e.target.files);
   };
 
-  // 重置，准备下次上传
+  // 重置
   const handleReset = () => {
     setStatus("idle");
-    setResult(null);
+    setResults([]);
     setErrorMsg("");
-    setPreview("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -146,6 +147,7 @@ export default function UploadZone() {
             ref={fileInputRef}
             type="file"
             accept={ACCEPT}
+            multiple
             onChange={handleFileChange}
             className="hidden"
           />
@@ -178,33 +180,21 @@ export default function UploadZone() {
               <p className="text-sm font-medium text-gray-600">
                 {status === "dragging" ? "松开放到这里" : "拖拽照片到此处"}
               </p>
-              <p className="text-xs text-gray-400">或点击选择文件 · JPG / PNG</p>
+              <p className="text-xs text-gray-400">
+                或点击选择文件 · JPG / PNG · 支持多张
+              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* ---- success 状态：显示上传结果 ---- */}
-      {status === "success" && result && (
+      {/* ---- success 状态：显示上传结果列表 ---- */}
+      {status === "success" && results.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          {/* 照片预览 */}
-          <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center overflow-hidden">
-            {preview ? (
-              <img
-                src={preview}
-                alt={result.original_name}
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <div className="text-gray-300 text-sm">无预览</div>
-            )}
-          </div>
-
-          {/* EXIF 信息卡片 */}
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-900">
-                上传成功 — {result.original_name}
+                成功上传 {results.length} 张照片
               </h3>
               <button
                 onClick={handleReset}
@@ -214,15 +204,28 @@ export default function UploadZone() {
               </button>
             </div>
 
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
-              <ExifRow label="相机" value={result.exif.cameraModel} />
-              <ExifRow label="镜头" value={result.exif.lensModel} />
-              <ExifRow label="焦距" value={result.exif.focalLength} />
-              <ExifRow label="光圈" value={result.exif.aperture} />
-              <ExifRow label="快门" value={result.exif.shutterSpeed} />
-              <ExifRow label="ISO" value={result.exif.iso?.toString() ?? null} />
-              <ExifRow label="拍摄时间" value={result.exif.dateTaken} />
-            </dl>
+            {/* 文件列表 */}
+            <ul className="divide-y divide-gray-50">
+              {results.map((r) => (
+                <li
+                  key={r.id}
+                  className="flex items-center justify-between py-2 first:pt-0 last:pb-0"
+                >
+                  <span className="text-xs text-gray-700 truncate max-w-[60%]">
+                    {r.original_name}
+                  </span>
+                  <span className="text-xs text-gray-400 shrink-0">
+                    {[
+                      r.exif.cameraModel,
+                      r.exif.focalLength,
+                      r.exif.aperture,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "无 EXIF"}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}
@@ -239,16 +242,6 @@ export default function UploadZone() {
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-/** EXIF 信息行 —— 单行键值对 */
-function ExifRow({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="flex justify-between py-1 border-b border-gray-50 last:border-0">
-      <dt className="text-xs text-gray-400">{label}</dt>
-      <dd className="text-xs text-gray-700 font-medium">{value || "—"}</dd>
     </div>
   );
 }
