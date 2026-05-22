@@ -3,3 +3,7 @@ node_modules/
 uploads/*
 !uploads/.gitkeep
 *.db
+photos.db-shm
+photos.db-wal
+next-env.d.ts
+package-lock.json
