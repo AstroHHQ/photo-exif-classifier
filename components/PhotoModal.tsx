@@ -302,9 +302,8 @@ export default function PhotoModal({
                   setNoteDraft(userInput);
                 }}
                 onKeyDown={(e) => {
-                  // 录音中不触发保存
-                  if (listening) return;
-                  // Shift+Enter 正常换行
+                  // 录音中不触发保存 — 用 ref 保证实时性
+                  if (listeningRef.current) return;
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     handleSave();
