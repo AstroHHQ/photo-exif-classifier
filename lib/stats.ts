@@ -38,7 +38,7 @@ export function getStats(): Stats {
    * 1. 按 fn(photo) 分组计数
    * 2. 按 count 降序排列
    */
-  const aggregate = (fn: (p: Photo) => string): StatItem[] => {
+  const aggregate = (fn: (p: Photo) => string | null): StatItem[] => {
     const map = photos.reduce<Record<string, number>>((acc, p) => {
       const key = label(fn(p));
       acc[key] = (acc[key] || 0) + 1;
@@ -59,4 +59,51 @@ export function getStats(): Stats {
     shutterSpeeds: aggregate((p) => p.shutter_speed),
     totalPhotos: photos.length,
   };
+}
+
+/** 筛选选项 */
+export interface FilterOptions {
+  cameras: string[];
+  lenses: string[];
+  apertures: string[];
+  isos: string[];
+}
+
+/** 筛选条件 */
+export interface Filters {
+  camera: string | null;
+  lens: string | null;
+  aperture: string | null;
+  iso: string | null;
+}
+
+/** 获取可用的筛选选项（去重排序） */
+export function getFilterOptions(): FilterOptions {
+  const photos = getAllPhotos();
+  const unique = (fn: (p: Photo) => string | null): string[] => {
+    const set = new Set<string>();
+    for (const p of photos) {
+      const val = fn(p);
+      if (val) set.add(val);
+    }
+    return Array.from(set).sort();
+  };
+  return {
+    cameras: unique((p) => p.camera_model),
+    lenses: unique((p) => p.lens_model),
+    apertures: unique((p) => p.aperture),
+    isos: unique((p) => (p.iso != null ? String(p.iso) : null)),
+  };
+}
+
+/** 根据筛选条件过滤照片 */
+export function filterPhotos(filters: Filters): Photo[] {
+  const photos = getAllPhotos();
+  return photos.filter((p) => {
+    if (filters.camera && p.camera_model !== filters.camera) return false;
+    if (filters.lens && p.lens_model !== filters.lens) return false;
+    if (filters.aperture && p.aperture !== filters.aperture) return false;
+    if (filters.iso && String(p.iso) !== filters.iso) return false;
+    return true;
+  });
 }

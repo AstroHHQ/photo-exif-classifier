@@ -10,17 +10,30 @@
 import { useEffect, useState } from "react";
 import PhotoCard, { type PhotoData } from "./PhotoCard";
 
-export default function PhotoGrid() {
+interface Props {
+  /** 外部传入的照片列表（用于筛选场景），不传则自动从 API 获取 */
+  photos?: PhotoData[];
+}
+
+export default function PhotoGrid({ photos: externalPhotos }: Props) {
   const [photos, setPhotos] = useState<PhotoData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!externalPhotos);
 
   useEffect(() => {
+    // 如果外部传了照片，直接使用
+    if (externalPhotos) {
+      setPhotos(externalPhotos);
+      setLoading(false);
+      return;
+    }
+    // 否则从 API 获取
+    setLoading(true);
     fetch("/api/photos")
       .then((res) => res.json())
       .then((data: PhotoData[]) => setPhotos(data))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [externalPhotos]);
 
   // 加载中
   if (loading) {
