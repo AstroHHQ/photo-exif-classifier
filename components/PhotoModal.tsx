@@ -6,7 +6,8 @@
  * 功能：
  * - 左图右 EXIF，全屏遮罩
  * - 键盘 Esc 关闭，← → 切换前后照片
- * - 备注编辑 + Web Speech API 语音输入
+ * - 按住空格键直接录音，松开停止并填入备注框
+ * - 备注编辑 + 🎤 按钮手动录音
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -56,7 +57,15 @@ export default function PhotoModal({
   const recognitionRef = useRef<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 重置编辑状态
+  // refs 用于在事件回调中读取最新 state（避免闭包过期）
+  const editingRef = useRef(editing);
+  editingRef.current = editing;
+  const listeningRef = useRef(listening);
+  listeningRef.current = listening;
+  const photoRef = useRef(photo);
+  photoRef.current = photo;
+
+  // 重置编辑状态（照片切换时）
   useEffect(() => {
     setEditing(false);
     setNoteDraft("");
@@ -66,38 +75,18 @@ export default function PhotoModal({
 
   const index = photo ? photos.indexOf(photo) : -1;
 
-  // 键盘事件
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft") onPrev();
-      if (e.key === "ArrowRight") onNext();
-    },
-    [onClose, onPrev, onNext]
-  );
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-      stopListening();
-    };
-  }, [handleKeyDown]);
-
   // ---- 语音识别 ----
-  const stopListening = () => {
+  const stopListening = useCallback(() => {
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
       recognitionRef.current = null;
     }
     setListening(false);
     setInterimText("");
-  };
+  }, []);
 
-  const startListening = () => {
-    if (!isSpeechSupported) return;
+  const startListening = useCallback(() => {
+    if (!isSpeechSupported || listeningRef.current) return;
 
     const recognition = new SpeechRecognitionAPI();
     recognition.lang = "zh-CN";
@@ -130,7 +119,79 @@ export default function PhotoModal({
     recognitionRef.current = recognition;
     recognition.start();
     setListening(true);
-  };
+  }, [stopListening]);
+
+  /** 进入编辑模式 */
+  const handleStartEdit = useCallback(() => {
+    const p = photoRef.current;
+    setNoteDraft(p?.note || "");
+    setEditing(true);
+  }, []);
+
+  // 键盘：Esc / ← / →
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") onPrev();
+      if (e.key === "ArrowRight") onNext();
+    },
+    [onClose, onPrev, onNext]
+  );
+
+  // 主体键盘绑定 + body scroll lock
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+      stopListening();
+    };
+  }, [handleKeyDown, stopListening]);
+
+  // ---- 空格键录音 ----
+  useEffect(() => {
+    const handleSpaceDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      // 用户正在 textarea 打字时不拦截
+      if (document.activeElement === textareaRef.current) return;
+
+      e.preventDefault();
+
+      // 不在编辑模式则自动进入
+      if (!editingRef.current) {
+        const p = photoRef.current;
+        if (p) {
+          setNoteDraft(p.note || "");
+          setEditing(true);
+        }
+      }
+
+      // 有语音支持则开始录音
+      if (isSpeechSupported && !listeningRef.current) {
+        startListening();
+      }
+    };
+
+    const handleSpaceUp = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      if (document.activeElement === textareaRef.current) return;
+
+      e.preventDefault();
+
+      if (listeningRef.current) {
+        stopListening();
+      }
+    };
+
+    document.addEventListener("keydown", handleSpaceDown);
+    document.addEventListener("keyup", handleSpaceUp);
+
+    return () => {
+      document.removeEventListener("keydown", handleSpaceDown);
+      document.removeEventListener("keyup", handleSpaceUp);
+    };
+  }, [startListening, stopListening]);
 
   if (!photo) return null;
 
@@ -140,12 +201,6 @@ export default function PhotoModal({
   const handleSave = () => {
     onNoteChange(photo.id, noteDraft);
     setEditing(false);
-  };
-
-  /** 进入编辑模式 */
-  const handleStartEdit = () => {
-    setNoteDraft(photo.note || "");
-    setEditing(true);
   };
 
   return (
@@ -240,8 +295,10 @@ export default function PhotoModal({
                 rows={3}
                 value={noteDraft + (interimText ? ` ${interimText}` : "")}
                 onChange={(e) => {
-                  // 只处理用户输入，不处理 interim（它在 value 里已经显示了）
-                  const userInput = e.target.value.replace(interimText ? ` ${interimText}` : "", "");
+                  const userInput = e.target.value.replace(
+                    interimText ? ` ${interimText}` : "",
+                    ""
+                  );
                   setNoteDraft(userInput);
                 }}
                 placeholder="添加备注…"
@@ -260,7 +317,7 @@ export default function PhotoModal({
                       w-8 h-8 rounded-full flex items-center justify-center transition-colors
                       ${listening ? "bg-red-500 animate-pulse" : "bg-gray-100 hover:bg-gray-200"}
                     `}
-                    title={listening ? "录音中…" : "按住录音"}
+                    title={listening ? "录音中…" : "按住录音（或按住空格键）"}
                   >
                     <svg
                       className={`w-4 h-4 ${listening ? "text-white" : "text-gray-500"}`}
