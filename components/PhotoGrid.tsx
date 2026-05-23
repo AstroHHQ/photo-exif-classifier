@@ -13,9 +13,11 @@ import PhotoCard, { type PhotoData } from "./PhotoCard";
 interface Props {
   /** 外部传入的照片列表（用于筛选场景），不传则自动从 API 获取 */
   photos?: PhotoData[];
+  /** 点击照片回调 */
+  onPhotoClick?: (id: number) => void;
 }
 
-export default function PhotoGrid({ photos: externalPhotos }: Props) {
+export default function PhotoGrid({ photos: externalPhotos, onPhotoClick }: Props) {
   const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [loading, setLoading] = useState(!externalPhotos);
 
@@ -58,7 +60,7 @@ export default function PhotoGrid({ photos: externalPhotos }: Props) {
   return (
     <div className="w-full max-w-7xl mx-auto columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6">
       {photos.map((photo) => (
-        <PhotoCard key={photo.id} photo={photo} />
+        <PhotoCard key={photo.id} photo={photo} onPhotoClick={() => onPhotoClick?.(photo.id)} />
       ))}
     </div>
   );

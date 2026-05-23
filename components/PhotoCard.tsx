@@ -24,27 +24,32 @@ export interface PhotoData {
   iso: number | null;
   aperture: string | null;
   shutter_speed: string | null;
+  note: string;
   date_taken: string | null;
   file_size: number;
 }
 
 interface Props {
   photo: PhotoData;
+  /** 点击整张卡片时回调 */
+  onPhotoClick?: () => void;
 }
 
-export default function PhotoCard({ photo }: Props) {
+export default function PhotoCard({ photo, onPhotoClick }: Props) {
   const [loaded, setLoaded] = useState(false);
   const imageUrl = `/api/photos/${photo.id}/file`;
 
   return (
     <div
-      className="
+      onClick={onPhotoClick}
+      className={`
         break-inside-avoid mb-6
         bg-white rounded-xl border border-gray-100
         shadow-sm hover:shadow-md
         transition-shadow duration-200
         overflow-hidden
-      "
+        ${onPhotoClick ? "cursor-pointer" : ""}
+      `}
     >
       {/* 缩略图区 */}
       <div className="relative bg-gray-50">
@@ -72,6 +77,13 @@ export default function PhotoCard({ photo }: Props) {
           {[photo.focal_length, photo.aperture].filter(Boolean).join(" · ") || "—"}
         </span>
       </div>
+
+      {/* 备注预览 */}
+      {photo.note && (
+        <p className="text-[10px] text-gray-500 truncate px-3 pb-2 leading-tight">
+          {photo.note}
+        </p>
+      )}
     </div>
   );
 }

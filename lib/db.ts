@@ -42,11 +42,16 @@ function initTables(db: Database.Database) {
       iso           INTEGER,                -- ISO 值，如 3200
       aperture      TEXT,                   -- 光圈，如 "f/2.8"
       shutter_speed TEXT,                   -- 快门速度，如 "1/250"
+      note          TEXT DEFAULT '',        -- 用户备注
       date_taken    TEXT,                   -- 拍摄时间，ISO 8601 格式
       file_size     INTEGER NOT NULL,       -- 文件大小（字节）
       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+  // 兼容旧数据库：如果 note 列不存在则添加
+  try {
+    db.exec(`ALTER TABLE photos ADD COLUMN note TEXT DEFAULT ''`);
+  } catch { /* 列已存在，忽略 */ }
 }
 
 /** 照片记录的类型定义 */
@@ -60,6 +65,7 @@ export interface Photo {
   iso: number | null;
   aperture: string | null;
   shutter_speed: string | null;
+  note: string;
   date_taken: string | null;
   file_size: number;
   created_at: string;
@@ -72,9 +78,9 @@ export function insertPhoto(photo: Omit<Photo, "id" | "created_at">): number {
   const d = getDb();
   const stmt = d.prepare(`
     INSERT INTO photos (filename, original_name, camera_model, lens_model,
-      focal_length, iso, aperture, shutter_speed, date_taken, file_size)
+      focal_length, iso, aperture, shutter_speed, note, date_taken, file_size)
     VALUES (@filename, @original_name, @camera_model, @lens_model,
-      @focal_length, @iso, @aperture, @shutter_speed, @date_taken, @file_size)
+      @focal_length, @iso, @aperture, @shutter_speed, @note, @date_taken, @file_size)
   `);
   const result = stmt.run(photo);
   return Number(result.lastInsertRowid);
@@ -94,4 +100,12 @@ export function getAllPhotos(): Photo[] {
 export function getPhotoById(id: number): Photo | undefined {
   const d = getDb();
   return d.prepare("SELECT * FROM photos WHERE id = ?").get(id) as Photo | undefined;
+}
+
+/**
+ * 更新照片备注。
+ */
+export function updatePhotoNote(id: number, note: string): void {
+  const d = getDb();
+  d.prepare("UPDATE photos SET note = ? WHERE id = ?").run(note, id);
 }

@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
         iso: exif.iso,
         aperture: exif.aperture,
         shutter_speed: exif.shutterSpeed,
+        note: "",
         date_taken: exif.dateTaken,
         file_size: entry.size,
       });
