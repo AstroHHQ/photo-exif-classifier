@@ -64,6 +64,8 @@ export default function PhotoModal({
   listeningRef.current = listening;
   const photoRef = useRef(photo);
   photoRef.current = photo;
+  const noteDraftRef = useRef(noteDraft);
+  noteDraftRef.current = noteDraft;
 
   // 重置编辑状态（照片切换时）
   useEffect(() => {
@@ -72,6 +74,14 @@ export default function PhotoModal({
     setListening(false);
     setInterimText("");
   }, [photo?.id]);
+
+  // 进入编辑模式时自动聚焦 textarea
+  useEffect(() => {
+    if (editing) {
+      // 等 React 渲染完 textarea 后再聚焦
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    }
+  }, [editing]);
 
   const index = photo ? photos.indexOf(photo) : -1;
 
@@ -184,14 +194,29 @@ export default function PhotoModal({
       }
     };
 
+    /** 全局 Enter 保存 —— textarea 未聚焦时兜底 */
+    const handleEnterDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || e.shiftKey) return;
+      if (!editingRef.current || listeningRef.current) return;
+      // textarea 聚焦时由它自己的 onKeyDown 处理
+      if (document.activeElement === textareaRef.current) return;
+
+      e.preventDefault();
+      const p = photoRef.current;
+      if (p) onNoteChange(p.id, noteDraftRef.current);
+      setEditing(false);
+    };
+
     document.addEventListener("keydown", handleSpaceDown);
     document.addEventListener("keyup", handleSpaceUp);
+    document.addEventListener("keydown", handleEnterDown);
 
     return () => {
       document.removeEventListener("keydown", handleSpaceDown);
       document.removeEventListener("keyup", handleSpaceUp);
+      document.removeEventListener("keydown", handleEnterDown);
     };
-  }, [startListening, stopListening]);
+  }, [startListening, stopListening, onNoteChange]);
 
   if (!photo) return null;
 
