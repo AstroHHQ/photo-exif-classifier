@@ -301,6 +301,15 @@ export default function PhotoModal({
                   );
                   setNoteDraft(userInput);
                 }}
+                onKeyDown={(e) => {
+                  // 录音中不触发保存
+                  if (listening) return;
+                  // Shift+Enter 正常换行
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSave();
+                  }
+                }}
                 placeholder="添加备注…"
                 className="w-full rounded-xl border border-gray-200 text-sm p-3 text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none"
               />
