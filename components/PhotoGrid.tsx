@@ -19,9 +19,19 @@ interface Props {
   showSortControls?: boolean;
   onMoveUp?: (photoId: number) => void;
   onMoveDown?: (photoId: number) => void;
+  /** 封面设置（仅摄影集详情页使用） */
+  showCoverButton?: boolean;
+  coverPhotoId?: number | null;
+  onSetCover?: (photoId: number) => void;
+  /** 删除照片回调 */
+  onDelete?: (photoId: number) => void;
+  /** 可选摄影集列表（用于导入选择） */
+  collections?: { id: number; title: string }[];
+  /** 导入到摄影集回调 */
+  onImportToCollection?: (photoId: number, collectionId: number) => void;
 }
 
-export default function PhotoGrid({ photos: externalPhotos, onPhotoClick, showSortControls, onMoveUp, onMoveDown }: Props) {
+export default function PhotoGrid({ photos: externalPhotos, onPhotoClick, showSortControls, onMoveUp, onMoveDown, showCoverButton, coverPhotoId, onSetCover, onDelete, collections, onImportToCollection }: Props) {
   const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [loading, setLoading] = useState(!externalPhotos);
 
@@ -73,6 +83,12 @@ export default function PhotoGrid({ photos: externalPhotos, onPhotoClick, showSo
           isLast={showSortControls && photos.indexOf(photo) === photos.length - 1}
           onMoveUp={() => onMoveUp?.(photo.id)}
           onMoveDown={() => onMoveDown?.(photo.id)}
+          showCoverButton={showCoverButton}
+          onSetCover={() => onSetCover?.(photo.id)}
+          isCover={coverPhotoId != null && coverPhotoId === photo.id}
+          onDelete={onDelete ? () => onDelete(photo.id) : undefined}
+          collections={collections}
+          onImportToCollection={onImportToCollection}
         />
       ))}
     </div>

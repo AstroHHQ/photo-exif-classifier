@@ -20,6 +20,7 @@ import type { Filters } from "@/lib/stats";
 
 export default function PhotoContainer() {
   const [allPhotos, setAllPhotos] = useState<PhotoData[]>([]);
+  const [collections, setCollections] = useState<{ id: number; title: string }[]>([]);
   const [selectedPhotoId, setSelectedPhotoId] = useState<number | null>(null);
   const [filters, setFilters] = useState<Filters>({
     camera: null,
@@ -33,6 +34,14 @@ export default function PhotoContainer() {
     fetch("/api/photos?unarchived=1")
       .then((res) => res.json())
       .then((data: PhotoData[]) => setAllPhotos(data))
+      .catch(console.error);
+  }, []);
+
+  // 获取可编辑摄影集列表（排除 published，用于导入选择）
+  useEffect(() => {
+    fetch("/api/collections?editable=1")
+      .then((res) => res.json())
+      .then((data: { id: number; title: string }[]) => setCollections(data))
       .catch(console.error);
   }, []);
 
@@ -116,6 +125,35 @@ export default function PhotoContainer() {
     []
   );
 
+  // 删除照片
+  const handleDelete = useCallback(async (photoId: number) => {
+    if (!window.confirm("确认删除这张照片？")) return;
+    try {
+      await fetch(`/api/photos/${photoId}`, { method: "DELETE" });
+      setAllPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    } catch (err) {
+      console.error("删除失败:", err);
+    }
+  }, []);
+
+  // 导入照片到摄影集
+  const handleImportToCollection = useCallback(
+    async (photoId: number, collectionId: number) => {
+      try {
+        await fetch(`/api/photos/${photoId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ collection_id: collectionId }),
+        });
+        // 从未归档列表移除
+        setAllPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      } catch (err) {
+        console.error("导入失败:", err);
+      }
+    },
+    []
+  );
+
   return (
     <>
       {/* 统计面板 */}
@@ -133,6 +171,9 @@ export default function PhotoContainer() {
       <PhotoGrid
         photos={filteredPhotos}
         onPhotoClick={(id) => setSelectedPhotoId(id)}
+        onDelete={handleDelete}
+        collections={collections}
+        onImportToCollection={handleImportToCollection}
       />
 
       {/* 详情弹窗 */}

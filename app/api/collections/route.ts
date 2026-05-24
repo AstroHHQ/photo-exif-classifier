@@ -7,15 +7,24 @@ import {
   getAllCollections,
   createCollection,
   getCollectionPhotos,
+  getCollectionProgress,
 } from "@/lib/db";
 
-/** 获取所有摄影集列表（含前 3 张预览照片） */
-export async function GET() {
-  const collections = getAllCollections();
+/** 获取所有摄影集列表（含前 3 张预览照片 + 编辑进度）。?editable=1 只返回 draft + ready */
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const editableOnly = searchParams.get("editable") === "1";
+
+  let collections = getAllCollections();
+  if (editableOnly) {
+    collections = collections.filter((c) => c.status !== "published");
+  }
+
   const withPreviews = collections.map((c) => ({
     ...c,
     previewPhotos: getCollectionPhotos(c.id).slice(0, 3),
     photoCount: getCollectionPhotos(c.id).length,
+    progress: getCollectionProgress(c.id),
   }));
   return NextResponse.json(withPreviews);
 }

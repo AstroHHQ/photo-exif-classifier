@@ -26,6 +26,18 @@ export async function GET(
   }
 
   const photos = getCollectionPhotos(collectionId);
+
+  // 自动检测 ready：draft 状态下，全部备注或全部排序 → 自动升为 ready
+  if (collection.status === "draft" && photos.length > 0) {
+    const allNoted = photos.every((p) => p.note && p.note !== "");
+    const sortedOrders = new Set(photos.map((p) => p.sort_order));
+    const allSorted = sortedOrders.size === photos.length;
+    if (allNoted || allSorted) {
+      updateCollection(collectionId, { status: "ready" });
+      collection.status = "ready";
+    }
+  }
+
   return NextResponse.json({ ...collection, photos });
 }
 
@@ -42,6 +54,15 @@ export async function PATCH(
 
   try {
     const body = await request.json();
+
+    // ready → published 时自动递增版本号
+    if (body.status === "published") {
+      const current = getCollectionById(collectionId);
+      if (current && current.status !== "published") {
+        body.version = current.version + 1;
+      }
+    }
+
     const updated = updateCollection(collectionId, body);
     if (!updated) {
       return NextResponse.json({ error: "摄影集不存在" }, { status: 404 });

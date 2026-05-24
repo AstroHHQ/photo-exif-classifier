@@ -43,6 +43,7 @@ function initTables(db: Database.Database) {
       aperture      TEXT,                   -- 光圈，如 "f/2.8"
       shutter_speed TEXT,                   -- 快门速度，如 "1/250"
       note          TEXT DEFAULT '',        -- 用户备注
+      storage_mode  TEXT NOT NULL DEFAULT 'copied',  -- copied | referenced
       date_taken    TEXT,                   -- 拍摄时间，ISO 8601 格式
       file_size     INTEGER NOT NULL,       -- 文件大小（字节）
       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
@@ -60,6 +61,8 @@ function initTables(db: Database.Database) {
   try {
     db.exec(`ALTER TABLE photos ADD COLUMN sort_order INTEGER DEFAULT 0`);
   } catch { /* 列已存在，忽略 */ }
+  // 迁移：将所有 sort_order=0 的照片改为 NULL（表示未排序）
+  db.exec(`UPDATE photos SET sort_order = NULL WHERE sort_order = 0`);
 
   // 摄影集表
   db.exec(`
@@ -70,10 +73,19 @@ function initTables(db: Database.Database) {
       status          TEXT NOT NULL DEFAULT 'draft',
       cover_photo_id  INTEGER,
       sort_order      TEXT DEFAULT '[]',
+      version         INTEGER NOT NULL DEFAULT 1,
       created_at      TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (cover_photo_id) REFERENCES photos(id) ON DELETE SET NULL
     );
   `);
+  // 兼容旧数据库：如果 version 列不存在则添加
+  try {
+    db.exec(`ALTER TABLE collections ADD COLUMN version INTEGER NOT NULL DEFAULT 1`);
+  } catch { /* 列已存在，忽略 */ }
+  // 兼容旧数据库：如果 storage_mode 列不存在则添加
+  try {
+    db.exec(`ALTER TABLE photos ADD COLUMN storage_mode TEXT NOT NULL DEFAULT 'copied'`);
+  } catch { /* 列已存在，忽略 */ }
 }
 
 /** 照片记录的类型定义 */
@@ -88,8 +100,9 @@ export interface Photo {
   aperture: string | null;
   shutter_speed: string | null;
   note: string;
+  storage_mode: "copied" | "referenced";
   collection_id: number | null;
-  sort_order: number;
+  sort_order: number | null;
   date_taken: string | null;
   file_size: number;
   created_at: string;
@@ -100,9 +113,10 @@ export interface Collection {
   id: number;
   title: string;
   description: string;
-  status: "draft" | "curated";
+  status: "draft" | "ready" | "published";
   cover_photo_id: number | null;
   sort_order: string; // JSON 数组 [photoId, ...]
+  version: number;
   created_at: string;
 }
 
@@ -113,9 +127,9 @@ export function insertPhoto(photo: Omit<Photo, "id" | "created_at">): number {
   const d = getDb();
   const stmt = d.prepare(`
     INSERT INTO photos (filename, original_name, camera_model, lens_model,
-      focal_length, iso, aperture, shutter_speed, note, collection_id, sort_order, date_taken, file_size)
+      focal_length, iso, aperture, shutter_speed, note, storage_mode, collection_id, sort_order, date_taken, file_size)
     VALUES (@filename, @original_name, @camera_model, @lens_model,
-      @focal_length, @iso, @aperture, @shutter_speed, @note, @collection_id, @sort_order, @date_taken, @file_size)
+      @focal_length, @iso, @aperture, @shutter_speed, @note, @storage_mode, @collection_id, @sort_order, @date_taken, @file_size)
   `);
   const result = stmt.run(photo);
   return Number(result.lastInsertRowid);
@@ -153,7 +167,7 @@ export function updatePhotoNote(id: number, note: string): void {
 export function createCollection(data: {
   title: string;
   description?: string;
-  status?: "draft" | "curated";
+  status?: "draft" | "ready" | "published";
 }): Collection {
   const d = getDb();
   const stmt = d.prepare(`
@@ -194,7 +208,7 @@ export function getCollectionById(id: number): Collection | undefined {
 export function getCollectionPhotos(collectionId: number): Photo[] {
   const d = getDb();
   return d
-    .prepare("SELECT * FROM photos WHERE collection_id = ? ORDER BY sort_order ASC, id ASC")
+    .prepare("SELECT * FROM photos WHERE collection_id = ? ORDER BY sort_order IS NULL ASC, sort_order ASC, id ASC")
     .all(collectionId) as Photo[];
 }
 
@@ -206,9 +220,10 @@ export function updateCollection(
   data: {
     title?: string;
     description?: string;
-    status?: "draft" | "curated";
+    status?: "draft" | "ready" | "published";
     cover_photo_id?: number | null;
     sort_order?: string;
+    version?: number;
   }
 ): Collection | undefined {
   const d = getDb();
@@ -235,6 +250,10 @@ export function updateCollection(
     fields.push("sort_order = @sort_order");
     values.sort_order = data.sort_order;
   }
+  if (data.version !== undefined) {
+    fields.push("version = @version");
+    values.version = data.version;
+  }
 
   if (fields.length === 0) return getCollectionById(id);
 
@@ -257,6 +276,42 @@ export function getUnarchivedPhotos(): Photo[] {
 }
 
 /**
+ * 删除照片记录。
+ * 同时清理封面引用 + 重新规范化 sort_order。
+ * 返回被删除的照片信息（供调用方清理文件）。
+ */
+export function deletePhoto(id: number): Photo | undefined {
+  const d = getDb();
+  const photo = getPhotoById(id);
+  if (!photo) return undefined;
+
+  // 如果该照片是某摄影集的封面，清除引用
+  d.prepare(
+    "UPDATE collections SET cover_photo_id = NULL WHERE cover_photo_id = ?"
+  ).run(id);
+
+  // 记录 collection_id 用于 sort_order 整理
+  const collectionId = photo.collection_id;
+
+  // 删除记录
+  d.prepare("DELETE FROM photos WHERE id = ?").run(id);
+
+  // 重新规范化 sort_order（消除空位）
+  if (collectionId != null) {
+    const remaining = d
+      .prepare(
+        "SELECT id FROM photos WHERE collection_id = ? AND sort_order IS NOT NULL ORDER BY sort_order ASC"
+      )
+      .all(collectionId) as { id: number }[];
+    remaining.forEach((p, i) => {
+      d.prepare("UPDATE photos SET sort_order = ? WHERE id = ?").run(i, p.id);
+    });
+  }
+
+  return photo;
+}
+
+/**
  * 在摄影集内移动照片位置（上移/下移）。
  * 交换目标照片与相邻照片的 sort_order 值。
  */
@@ -276,12 +331,14 @@ export function movePhotoInCollection(
   const a = photos[idx];
   const b = photos[targetIdx];
 
-  // 如果 sort_order 相同（新照片默认都是 0），先按当前位置归一化
-  if (a.sort_order === b.sort_order) {
-    photos.forEach((p, i) => {
-      d.prepare("UPDATE photos SET sort_order = ? WHERE id = ?").run(i, p.id);
-      p.sort_order = i; // 同步更新内存引用，使后续交换拿到正确的值
-    });
+  // 若 sort_order 为 NULL（从未排序），先用当前位置赋值
+  if (a.sort_order == null) {
+    d.prepare("UPDATE photos SET sort_order = ? WHERE id = ?").run(idx, a.id);
+    a.sort_order = idx;
+  }
+  if (b.sort_order == null) {
+    d.prepare("UPDATE photos SET sort_order = ? WHERE id = ?").run(targetIdx, b.id);
+    b.sort_order = targetIdx;
   }
 
   // 交换 sort_order
@@ -295,4 +352,72 @@ export function movePhotoInCollection(
   );
 
   return getCollectionPhotos(collectionId);
+}
+
+/**
+ * 将照片导入摄影集。
+ * - 设置 collection_id
+ * - sort_order 自动追加到末尾
+ * - 若摄影集无封面，自动设为封面
+ */
+export function updatePhotoCollectionId(
+  photoId: number,
+  collectionId: number
+): Photo | undefined {
+  const d = getDb();
+  const photo = getPhotoById(photoId);
+  if (!photo) return undefined;
+
+  // 获取目标摄影集当前最大 sort_order
+  const maxSort = d
+    .prepare(
+      "SELECT MAX(sort_order) as max_sort FROM photos WHERE collection_id = ?"
+    )
+    .get(collectionId) as { max_sort: number | null };
+
+  const newSortOrder = (maxSort.max_sort ?? -1) + 1;
+
+  d.prepare(
+    "UPDATE photos SET collection_id = ?, sort_order = ? WHERE id = ?"
+  ).run(collectionId, newSortOrder, photoId);
+
+  // 自动封面：若摄影集还没有封面，用第一张导入照片
+  const collection = getCollectionById(collectionId);
+  if (collection && collection.cover_photo_id == null) {
+    d.prepare("UPDATE collections SET cover_photo_id = ? WHERE id = ?").run(
+      photoId,
+      collectionId
+    );
+  }
+
+  return getPhotoById(photoId);
+}
+
+/**
+ * 获取摄影集编辑进度。
+ * 进度 = (已备注数 + 已排序数) / (总照片数 × 2)
+ * 已排序 = sort_order IS NOT NULL 的照片数量。
+ */
+export function getCollectionProgress(collectionId: number): {
+  total: number;
+  noted: number;
+  sorted: number;
+  progress: number;
+} {
+  const d = getDb();
+  const row = d
+    .prepare(
+      `SELECT
+        COUNT(*) AS total,
+        COUNT(CASE WHEN note IS NOT NULL AND note != '' THEN 1 END) AS noted,
+        COUNT(sort_order) AS sorted
+      FROM photos
+      WHERE collection_id = ?`
+    )
+    .get(collectionId) as { total: number; noted: number; sorted: number };
+
+  const { total, noted, sorted } = row;
+  const progress = total > 0 ? (noted + sorted) / (total * 2) : 0;
+
+  return { total, noted, sorted, progress };
 }

@@ -8,14 +8,33 @@
  */
 
 import type { PhotoData } from "./PhotoCard";
+import { getPhotoUrl } from "@/lib/file";
+
+/** 根据进度百分比返回进度条颜色 */
+function getProgressColor(progress: number): string {
+  if (progress <= 0.2) return "bg-red-400";
+  if (progress <= 0.4) return "bg-orange-400";
+  if (progress <= 0.6) return "bg-yellow-400";
+  if (progress <= 0.8) return "bg-emerald-400";
+  return "bg-green-400";
+}
+
+interface ProgressData {
+  total: number;
+  noted: number;
+  sorted: number;
+  progress: number; // 0 ~ 1
+}
 
 interface Props {
   id: number;
   title: string;
-  status: "draft" | "curated";
+  status: "draft" | "ready" | "published";
   coverPhotoId: number | null;
   previewPhotos: PhotoData[];
   photoCount: number;
+  progress?: ProgressData;
+  version?: number;
   onClick: () => void;
 }
 
@@ -25,6 +44,8 @@ export default function CollectionCard({
   coverPhotoId,
   previewPhotos,
   photoCount,
+  progress,
+  version,
   onClick,
 }: Props) {
   return (
@@ -38,8 +59,8 @@ export default function CollectionCard({
         overflow-hidden
       "
     >
-      {status === "draft" ? (
-        /* ---- draft：堆叠照片效果 ---- */
+      {status !== "published" ? (
+        /* ---- draft / ready：堆叠照片效果 ---- */
         <div className="relative bg-gray-50 p-4 pb-2">
           {/* 无照片时占位 */}
           {previewPhotos.length === 0 && (
@@ -53,7 +74,7 @@ export default function CollectionCard({
             {previewPhotos.slice(0, 3).map((photo, i) => (
               <img
                 key={photo.id}
-                src={`/api/photos/${photo.id}/file`}
+                src={getPhotoUrl(photo)}
                 alt=""
                 className={`
                   absolute inset-0 w-full h-full object-cover rounded-lg
@@ -88,7 +109,7 @@ export default function CollectionCard({
             />
           ) : previewPhotos.length > 0 ? (
             <img
-              src={`/api/photos/${previewPhotos[0].id}/file`}
+              src={getPhotoUrl(previewPhotos[0])}
               alt={title}
               className="w-full aspect-[4/3] object-cover"
             />
@@ -109,15 +130,41 @@ export default function CollectionCard({
           <p className="text-[10px] text-gray-400 mt-0.5">
             {photoCount} 张照片
           </p>
+          {/* 进度条（draft / ready 显示） */}
+          {status !== "published" && progress && progress.total > 0 && (
+            <div className="mt-1.5">
+              <div className="flex items-center justify-between text-[9px] text-gray-400 mb-0.5">
+                <span>
+                  备注 {progress.noted}/{progress.total} · 排序 {progress.sorted}/{progress.total}
+                </span>
+                <span>{Math.round(progress.progress * 100)}%</span>
+              </div>
+              <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${getProgressColor(progress.progress)}`}
+                  style={{ width: `${progress.progress * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
         <span
           className={`
             text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ml-2
-            ${status === "draft" ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-600"}
+            ${status === "draft" ? "bg-amber-50 text-amber-600" : ""}
+            ${status === "ready" ? "bg-blue-50 text-blue-600" : ""}
+            ${status === "published" ? "bg-green-50 text-green-600" : ""}
           `}
         >
-          {status === "draft" ? "待整理" : "已整理"}
+          {status === "draft" && "待整理"}
+          {status === "ready" && "可发布"}
+          {status === "published" && "已发布"}
         </span>
+        {status === "published" && version != null && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 bg-gray-50 text-gray-400">
+            v{version}
+          </span>
+        )}
       </div>
     </div>
   );

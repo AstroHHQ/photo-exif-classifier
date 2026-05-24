@@ -15,10 +15,17 @@ interface CollectionData {
   id: number;
   title: string;
   description: string;
-  status: "draft" | "curated";
+  status: "draft" | "ready" | "published";
   cover_photo_id: number | null;
   previewPhotos: PhotoData[];
   photoCount: number;
+  version: number;
+  progress?: {
+    total: number;
+    noted: number;
+    sorted: number;
+    progress: number;
+  };
 }
 
 export default function CollectionsPage() {
@@ -66,6 +73,8 @@ export default function CollectionsPage() {
             coverPhotoId={c.cover_photo_id}
             previewPhotos={c.previewPhotos}
             photoCount={c.photoCount}
+            progress={c.progress}
+            version={c.version}
             onClick={() => router.push(`/collections/${c.id}`)}
           />
         ))}

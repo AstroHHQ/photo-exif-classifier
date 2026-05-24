@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { PhotoData } from "./PhotoCard";
+import { getPhotoUrl } from "@/lib/file";
 
 /** 检测浏览器是否支持语音识别 */
 const SpeechRecognitionAPI =
@@ -51,11 +52,13 @@ export default function PhotoModal({
   // 备注编辑状态
   const [editing, setEditing] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   // 语音识别
   const [listening, setListening] = useState(false);
   const [interimText, setInterimText] = useState("");
   const recognitionRef = useRef<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // refs 用于在事件回调中读取最新 state（避免闭包过期）
   const editingRef = useRef(editing);
@@ -64,6 +67,26 @@ export default function PhotoModal({
   listeningRef.current = listening;
   const photoRef = useRef(photo);
   photoRef.current = photo;
+  const noteDraftRef = useRef(noteDraft);
+  noteDraftRef.current = noteDraft;
+
+  /** 执行保存（供 debounce 和 flush 共用） */
+  const doSave = useCallback(() => {
+    const p = photoRef.current;
+    const draft = noteDraftRef.current;
+    if (!p || draft === p.note) return;
+    setSaveStatus("saving");
+    onNoteChange(p.id, draft);
+    setSaveStatus("saved");
+  }, [onNoteChange]);
+
+  /** 清除 debounce 定时器 */
+  const clearSaveTimer = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+  }, []);
 
   // 重置编辑状态（照片切换时）
   useEffect(() => {
@@ -71,7 +94,26 @@ export default function PhotoModal({
     setNoteDraft("");
     setListening(false);
     setInterimText("");
-  }, [photo?.id]);
+    setSaveStatus("idle");
+    clearSaveTimer();
+  }, [photo?.id, clearSaveTimer]);
+
+  // 自动保存：停止输入 1 秒后触发
+  useEffect(() => {
+    if (!editing) return;
+    clearSaveTimer();
+    const draft = noteDraft;
+    const p = photoRef.current;
+    if (!p || draft === p.note) {
+      setSaveStatus("idle");
+      return;
+    }
+    setSaveStatus("saving");
+    saveTimerRef.current = setTimeout(() => {
+      doSave();
+    }, 1000);
+    return clearSaveTimer;
+  }, [noteDraft, editing, clearSaveTimer, doSave]);
 
   const index = photo ? photos.indexOf(photo) : -1;
 
@@ -195,13 +237,14 @@ export default function PhotoModal({
 
   if (!photo) return null;
 
-  const imageUrl = `/api/photos/${photo.id}/file`;
+  const imageUrl = getPhotoUrl(photo);
 
-  /** 保存备注 */
-  const handleSave = () => {
-    onNoteChange(photo.id, noteDraft);
+  /** 完成编辑：立即保存并退出 */
+  const handleFinish = useCallback(() => {
+    clearSaveTimer();
+    doSave();
     setEditing(false);
-  };
+  }, [clearSaveTimer, doSave]);
 
   return (
     <div
@@ -334,11 +377,22 @@ export default function PhotoModal({
                   </button>
                 )}
                 <div className="flex-1" />
-                <button
-                  onClick={handleSave}
-                  className="text-xs text-white bg-blue-500 rounded-lg px-3 py-1.5 hover:bg-blue-600 transition-colors"
+                <span
+                  className={`
+                    text-[10px] mr-2
+                    ${saveStatus === "saving" ? "text-amber-500" : ""}
+                    ${saveStatus === "saved" ? "text-green-500" : ""}
+                    ${saveStatus === "idle" ? "text-transparent" : ""}
+                  `}
                 >
-                  保存
+                  {saveStatus === "saving" && "保存中…"}
+                  {saveStatus === "saved" && "已保存"}
+                </span>
+                <button
+                  onClick={handleFinish}
+                  className="text-xs text-gray-500 rounded-lg px-3 py-1.5 hover:bg-gray-100 transition-colors"
+                >
+                  完成
                 </button>
               </div>
             </>
