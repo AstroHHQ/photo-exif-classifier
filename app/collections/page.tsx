@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import CollectionCard from "@/components/CollectionCard";
 import type { PhotoData } from "@/components/PhotoCard";
 
@@ -21,6 +22,7 @@ interface CollectionData {
 }
 
 export default function CollectionsPage() {
+  const router = useRouter();
   const [collections, setCollections] = useState<CollectionData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,9 +66,7 @@ export default function CollectionsPage() {
             coverPhotoId={c.cover_photo_id}
             previewPhotos={c.previewPhotos}
             photoCount={c.photoCount}
-            onClick={() => {
-              // TODO: 摄影集详情页 — 后续阶段实现
-            }}
+            onClick={() => router.push(`/collections/${c.id}`)}
           />
         ))}
       </div>

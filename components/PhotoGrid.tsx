@@ -15,9 +15,13 @@ interface Props {
   photos?: PhotoData[];
   /** 点击照片回调 */
   onPhotoClick?: (id: number) => void;
+  /** 排序控制（仅摄影集详情页使用） */
+  showSortControls?: boolean;
+  onMoveUp?: (photoId: number) => void;
+  onMoveDown?: (photoId: number) => void;
 }
 
-export default function PhotoGrid({ photos: externalPhotos, onPhotoClick }: Props) {
+export default function PhotoGrid({ photos: externalPhotos, onPhotoClick, showSortControls, onMoveUp, onMoveDown }: Props) {
   const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [loading, setLoading] = useState(!externalPhotos);
 
@@ -60,7 +64,16 @@ export default function PhotoGrid({ photos: externalPhotos, onPhotoClick }: Prop
   return (
     <div className="w-full max-w-7xl mx-auto columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6">
       {photos.map((photo) => (
-        <PhotoCard key={photo.id} photo={photo} onPhotoClick={() => onPhotoClick?.(photo.id)} />
+        <PhotoCard
+          key={photo.id}
+          photo={photo}
+          onPhotoClick={() => onPhotoClick?.(photo.id)}
+          showSortControls={showSortControls}
+          isFirst={showSortControls && photos.indexOf(photo) === 0}
+          isLast={showSortControls && photos.indexOf(photo) === photos.length - 1}
+          onMoveUp={() => onMoveUp?.(photo.id)}
+          onMoveDown={() => onMoveDown?.(photo.id)}
+        />
       ))}
     </div>
   );

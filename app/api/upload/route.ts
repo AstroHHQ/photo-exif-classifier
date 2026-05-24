@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
         shutter_speed: exif.shutterSpeed,
         note: "",
         collection_id: collectionId,
+        sort_order: 0,
         date_taken: exif.dateTaken,
         file_size: entry.size,
       });

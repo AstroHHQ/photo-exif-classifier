@@ -56,6 +56,10 @@ function initTables(db: Database.Database) {
   try {
     db.exec(`ALTER TABLE photos ADD COLUMN collection_id INTEGER`);
   } catch { /* 列已存在，忽略 */ }
+  // 兼容旧数据库：如果 sort_order 列不存在则添加
+  try {
+    db.exec(`ALTER TABLE photos ADD COLUMN sort_order INTEGER DEFAULT 0`);
+  } catch { /* 列已存在，忽略 */ }
 
   // 摄影集表
   db.exec(`
@@ -85,6 +89,7 @@ export interface Photo {
   shutter_speed: string | null;
   note: string;
   collection_id: number | null;
+  sort_order: number;
   date_taken: string | null;
   file_size: number;
   created_at: string;
@@ -108,9 +113,9 @@ export function insertPhoto(photo: Omit<Photo, "id" | "created_at">): number {
   const d = getDb();
   const stmt = d.prepare(`
     INSERT INTO photos (filename, original_name, camera_model, lens_model,
-      focal_length, iso, aperture, shutter_speed, note, collection_id, date_taken, file_size)
+      focal_length, iso, aperture, shutter_speed, note, collection_id, sort_order, date_taken, file_size)
     VALUES (@filename, @original_name, @camera_model, @lens_model,
-      @focal_length, @iso, @aperture, @shutter_speed, @note, @collection_id, @date_taken, @file_size)
+      @focal_length, @iso, @aperture, @shutter_speed, @note, @collection_id, @sort_order, @date_taken, @file_size)
   `);
   const result = stmt.run(photo);
   return Number(result.lastInsertRowid);
@@ -189,7 +194,7 @@ export function getCollectionById(id: number): Collection | undefined {
 export function getCollectionPhotos(collectionId: number): Photo[] {
   const d = getDb();
   return d
-    .prepare("SELECT * FROM photos WHERE collection_id = ? ORDER BY date_taken DESC, id DESC")
+    .prepare("SELECT * FROM photos WHERE collection_id = ? ORDER BY sort_order ASC, id ASC")
     .all(collectionId) as Photo[];
 }
 
@@ -249,4 +254,45 @@ export function getUnarchivedPhotos(): Photo[] {
       "SELECT * FROM photos WHERE collection_id IS NULL ORDER BY date_taken DESC, id DESC"
     )
     .all() as Photo[];
+}
+
+/**
+ * 在摄影集内移动照片位置（上移/下移）。
+ * 交换目标照片与相邻照片的 sort_order 值。
+ */
+export function movePhotoInCollection(
+  photoId: number,
+  collectionId: number,
+  direction: "up" | "down"
+): Photo[] {
+  const d = getDb();
+  const photos = getCollectionPhotos(collectionId);
+  const idx = photos.findIndex((p) => p.id === photoId);
+  if (idx === -1) return photos;
+
+  const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+  if (targetIdx < 0 || targetIdx >= photos.length) return photos;
+
+  const a = photos[idx];
+  const b = photos[targetIdx];
+
+  // 如果 sort_order 相同（新照片默认都是 0），先按当前位置归一化
+  if (a.sort_order === b.sort_order) {
+    photos.forEach((p, i) => {
+      d.prepare("UPDATE photos SET sort_order = ? WHERE id = ?").run(i, p.id);
+      p.sort_order = i; // 同步更新内存引用，使后续交换拿到正确的值
+    });
+  }
+
+  // 交换 sort_order
+  d.prepare("UPDATE photos SET sort_order = ? WHERE id = ?").run(
+    b.sort_order,
+    a.id
+  );
+  d.prepare("UPDATE photos SET sort_order = ? WHERE id = ?").run(
+    a.sort_order,
+    b.id
+  );
+
+  return getCollectionPhotos(collectionId);
 }
