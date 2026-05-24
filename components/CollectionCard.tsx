@@ -10,6 +10,29 @@
 import type { PhotoData } from "./PhotoCard";
 import { getPhotoUrl } from "@/lib/file";
 
+/**
+ * 基于 photo.id 生成可复现的伪随机偏移。
+ * 使用 Knuth 乘法哈希，确保同一张照片每次渲染结果一致。
+ *
+ * 散落感的来源是每张照片有不同的锚点位置（top/left），而非仅 transform。
+ * 之前无效的根因：所有照片共享 top:6%/left:6%，rotate + translate 从同一原点
+ * 出发，视觉上几乎完全重叠。
+ */
+function getScatterTransform(
+  id: number
+): { rotate: number; topPct: number; leftPct: number } {
+  const h = (id * 2654435761) >>> 0; // 32-bit Knuth hash
+  const r1 = ((h >>> 16) & 0xffff) / 0xffff; // 0~1
+  const r2 = ((h >>> 8) & 0xffff) / 0xffff;
+  const r3 = (h & 0xffff) / 0xffff;
+
+  return {
+    rotate: (r1 - 0.5) * 22,    // -11deg ~ 11deg
+    topPct: 2 + r2 * 16,        // 2% ~ 18%
+    leftPct: 2 + r3 * 16,       // 2% ~ 18%
+  };
+}
+
 /** 根据进度百分比返回进度条颜色 */
 function getProgressColor(progress: number): string {
   if (progress <= 0.2) return "bg-red-400";
@@ -59,35 +82,66 @@ export default function CollectionCard({
         overflow-hidden
       "
     >
-      {status !== "published" ? (
-        /* ---- draft / ready：堆叠照片效果 ---- */
+      {status === "draft" ? (
+        /* ---- draft：散落照片（contact sheet 风格） ---- */
+        <div className="relative bg-gray-50 p-6 aspect-[3/2]">
+          {previewPhotos.length === 0 ? (
+            <div className="absolute inset-6 bg-gray-100 rounded-lg flex items-center justify-center">
+              <span className="text-xs text-gray-400">暂无照片</span>
+            </div>
+          ) : (
+            <>
+              <div
+                className="absolute w-[80%] h-[80%] bg-gray-200/60 rounded-lg"
+                style={{ top: "8%", left: "10%", zIndex: 0 }}
+              />
+              {previewPhotos.slice(0, 3).map((photo, i) => {
+                const t = getScatterTransform(photo.id);
+                return (
+                  <img
+                    key={photo.id}
+                    src={getPhotoUrl(photo)}
+                    alt=""
+                    className="absolute object-cover rounded-lg border border-white/80 shadow-md"
+                    style={{
+                      top: `${t.topPct}%`,
+                      left: `${t.leftPct}%`,
+                      width: "78%",
+                      height: "78%",
+                      transform: `rotate(${t.rotate}deg)`,
+                      zIndex: 3 - i,
+                    }}
+                  />
+                );
+              })}
+            </>
+          )}
+        </div>
+      ) : status === "ready" ? (
+        /* ---- ready：规整堆叠 ---- */
         <div className="relative bg-gray-50 p-4 pb-2">
-          {/* 无照片时占位 */}
           {previewPhotos.length === 0 && (
             <div className="aspect-[3/2] bg-gray-100 rounded-lg flex items-center justify-center">
               <span className="text-xs text-gray-400">暂无照片</span>
             </div>
           )}
-
-          {/* 堆叠效果：最多展示 3 张，叠加偏移 */}
-          <div className="relative aspect-[3/2]">
-            {previewPhotos.slice(0, 3).map((photo, i) => (
-              <img
-                key={photo.id}
-                src={getPhotoUrl(photo)}
-                alt=""
-                className={`
-                  absolute inset-0 w-full h-full object-cover rounded-lg
-                  border border-white/80 shadow-sm
-                `}
-                style={{
-                  transform: `translate(${i * 6}px, ${i * 6}px)`,
-                  zIndex: 3 - i,
-                }}
-              />
-            ))}
-            {/* 底部伪元素：暗示更多照片 */}
-            {previewPhotos.length > 0 && (
+          {previewPhotos.length > 0 && (
+            <div className="relative aspect-[3/2]">
+              {previewPhotos.slice(0, 3).map((photo, i) => (
+                <img
+                  key={photo.id}
+                  src={getPhotoUrl(photo)}
+                  alt=""
+                  className={`
+                    absolute inset-0 w-full h-full object-cover rounded-lg
+                    border border-white/80 shadow-sm
+                  `}
+                  style={{
+                    transform: `translate(${i * 6}px, ${i * 6}px)`,
+                    zIndex: 3 - i,
+                  }}
+                />
+              ))}
               <div
                 className="absolute inset-0 bg-gray-200 rounded-lg"
                 style={{
@@ -95,8 +149,8 @@ export default function CollectionCard({
                   zIndex: 0,
                 }}
               />
-            )}
-          </div>
+            </div>
+          )}
         </div>
       ) : (
         /* ---- curated：封面图 ---- */
