@@ -23,7 +23,7 @@ export default function Home() {
       </div>
 
       {/* 上传区 */}
-      <UploadZone />
+      <UploadZone showTargetSelector />
 
       {/* 照片管理（统计 + 筛选 + 瀑布流 + 详情弹窗） */}
       <PhotoContainer />

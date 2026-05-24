@@ -52,6 +52,24 @@ function initTables(db: Database.Database) {
   try {
     db.exec(`ALTER TABLE photos ADD COLUMN note TEXT DEFAULT ''`);
   } catch { /* 列已存在，忽略 */ }
+  // 兼容旧数据库：如果 collection_id 列不存在则添加
+  try {
+    db.exec(`ALTER TABLE photos ADD COLUMN collection_id INTEGER`);
+  } catch { /* 列已存在，忽略 */ }
+
+  // 摄影集表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS collections (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      title           TEXT NOT NULL DEFAULT '',
+      description     TEXT DEFAULT '',
+      status          TEXT NOT NULL DEFAULT 'draft',
+      cover_photo_id  INTEGER,
+      sort_order      TEXT DEFAULT '[]',
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (cover_photo_id) REFERENCES photos(id) ON DELETE SET NULL
+    );
+  `);
 }
 
 /** 照片记录的类型定义 */
@@ -66,8 +84,20 @@ export interface Photo {
   aperture: string | null;
   shutter_speed: string | null;
   note: string;
+  collection_id: number | null;
   date_taken: string | null;
   file_size: number;
+  created_at: string;
+}
+
+/** 摄影集记录的类型定义 */
+export interface Collection {
+  id: number;
+  title: string;
+  description: string;
+  status: "draft" | "curated";
+  cover_photo_id: number | null;
+  sort_order: string; // JSON 数组 [photoId, ...]
   created_at: string;
 }
 
@@ -78,9 +108,9 @@ export function insertPhoto(photo: Omit<Photo, "id" | "created_at">): number {
   const d = getDb();
   const stmt = d.prepare(`
     INSERT INTO photos (filename, original_name, camera_model, lens_model,
-      focal_length, iso, aperture, shutter_speed, note, date_taken, file_size)
+      focal_length, iso, aperture, shutter_speed, note, collection_id, date_taken, file_size)
     VALUES (@filename, @original_name, @camera_model, @lens_model,
-      @focal_length, @iso, @aperture, @shutter_speed, @note, @date_taken, @file_size)
+      @focal_length, @iso, @aperture, @shutter_speed, @note, @collection_id, @date_taken, @file_size)
   `);
   const result = stmt.run(photo);
   return Number(result.lastInsertRowid);
@@ -108,4 +138,115 @@ export function getPhotoById(id: number): Photo | undefined {
 export function updatePhotoNote(id: number, note: string): void {
   const d = getDb();
   d.prepare("UPDATE photos SET note = ? WHERE id = ?").run(note, id);
+}
+
+// ---- Collection（摄影集）操作 ----
+
+/**
+ * 创建摄影集。
+ */
+export function createCollection(data: {
+  title: string;
+  description?: string;
+  status?: "draft" | "curated";
+}): Collection {
+  const d = getDb();
+  const stmt = d.prepare(`
+    INSERT INTO collections (title, description, status)
+    VALUES (@title, @description, @status)
+  `);
+  const result = stmt.run({
+    title: data.title,
+    description: data.description || "",
+    status: data.status || "draft",
+  });
+  return getCollectionById(Number(result.lastInsertRowid))!;
+}
+
+/**
+ * 获取所有摄影集，按创建时间倒序。
+ */
+export function getAllCollections(): Collection[] {
+  const d = getDb();
+  return d.prepare(
+    "SELECT * FROM collections ORDER BY created_at DESC"
+  ).all() as Collection[];
+}
+
+/**
+ * 按 id 获取单个摄影集。
+ */
+export function getCollectionById(id: number): Collection | undefined {
+  const d = getDb();
+  return d.prepare("SELECT * FROM collections WHERE id = ?").get(id) as
+    | Collection
+    | undefined;
+}
+
+/**
+ * 获取摄影集下的照片列表。
+ */
+export function getCollectionPhotos(collectionId: number): Photo[] {
+  const d = getDb();
+  return d
+    .prepare("SELECT * FROM photos WHERE collection_id = ? ORDER BY date_taken DESC, id DESC")
+    .all(collectionId) as Photo[];
+}
+
+/**
+ * 更新摄影集信息。
+ */
+export function updateCollection(
+  id: number,
+  data: {
+    title?: string;
+    description?: string;
+    status?: "draft" | "curated";
+    cover_photo_id?: number | null;
+    sort_order?: string;
+  }
+): Collection | undefined {
+  const d = getDb();
+  const fields: string[] = [];
+  const values: Record<string, unknown> = { id };
+
+  if (data.title !== undefined) {
+    fields.push("title = @title");
+    values.title = data.title;
+  }
+  if (data.description !== undefined) {
+    fields.push("description = @description");
+    values.description = data.description;
+  }
+  if (data.status !== undefined) {
+    fields.push("status = @status");
+    values.status = data.status;
+  }
+  if (data.cover_photo_id !== undefined) {
+    fields.push("cover_photo_id = @cover_photo_id");
+    values.cover_photo_id = data.cover_photo_id;
+  }
+  if (data.sort_order !== undefined) {
+    fields.push("sort_order = @sort_order");
+    values.sort_order = data.sort_order;
+  }
+
+  if (fields.length === 0) return getCollectionById(id);
+
+  d.prepare(`UPDATE collections SET ${fields.join(", ")} WHERE id = @id`).run(
+    values
+  );
+  return getCollectionById(id);
+}
+
+/**
+ * 获取未归档照片（collection_id IS NULL）。
+ */
+export function getUnarchivedPhotos(): Photo[] {
+  const d = getDb();
+  return d
+    .prepare(
+      "SELECT * FROM photos WHERE collection_id IS NULL ORDER BY date_taken DESC, id DESC"
+    )
+    .all() as Photo[];
 }

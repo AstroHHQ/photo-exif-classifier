@@ -30,7 +30,7 @@ export default function PhotoContainer() {
 
   // 获取全量照片
   useEffect(() => {
-    fetch("/api/photos")
+    fetch("/api/photos?unarchived=1")
       .then((res) => res.json())
       .then((data: PhotoData[]) => setAllPhotos(data))
       .catch(console.error);

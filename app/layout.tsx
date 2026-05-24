@@ -23,7 +23,15 @@ export default function RootLayout({
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
             <h1 className="text-lg font-semibold tracking-tight">Photo Manager</h1>
-            <span className="text-xs text-gray-400">MVP</span>
+            <nav className="flex items-center gap-4">
+              <a href="/" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
+                首页
+              </a>
+              <a href="/collections" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
+                摄影集
+              </a>
+              <span className="text-xs text-gray-400">MVP</span>
+            </nav>
           </div>
         </header>
 

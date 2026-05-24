@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { readExif } from "@/lib/exif";
-import { insertPhoto } from "@/lib/db";
+import { insertPhoto, createCollection } from "@/lib/db";
 import path from "path";
 import fs from "fs/promises";
 import { randomUUID } from "crypto";
@@ -28,6 +28,28 @@ export async function POST(request: NextRequest) {
 
     if (files.length === 0) {
       return NextResponse.json({ error: "请选择文件" }, { status: 400 });
+    }
+
+    // 1.5 处理上传目标
+    const collectionIdRaw = formData.get("collectionId");
+    const newCollectionTitle = formData.get("newCollectionTitle");
+
+    console.log("[upload API] collectionIdRaw:", collectionIdRaw);
+    console.log("[upload API] newCollectionTitle:", newCollectionTitle);
+
+    let collectionId: number | null = null;
+    if (collectionIdRaw) {
+      collectionId = parseInt(String(collectionIdRaw), 10);
+      console.log("[upload API] uploading to existing collection:", collectionId);
+    } else if (newCollectionTitle) {
+      console.log("[upload API] creating new collection:", String(newCollectionTitle).trim());
+      const newCollection = createCollection({
+        title: String(newCollectionTitle).trim(),
+      });
+      collectionId = newCollection.id;
+      console.log("[upload API] new collection created, id:", collectionId);
+    } else {
+      console.log("[upload API] uploading to homepage (no collection)");
     }
 
     const uploadsDir = path.join(process.cwd(), "uploads");
@@ -69,9 +91,11 @@ export async function POST(request: NextRequest) {
         aperture: exif.aperture,
         shutter_speed: exif.shutterSpeed,
         note: "",
+        collection_id: collectionId,
         date_taken: exif.dateTaken,
         file_size: entry.size,
       });
+      console.log("[upload API] inserted photo id:", id, "collection_id:", collectionId);
 
       results.push({
         id,

@@ -11,7 +11,7 @@
  * - 拖入时蓝色高亮边框
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 // 允许的文件类型
 const ACCEPT = ".jpg,.jpeg,.png";
@@ -34,11 +34,38 @@ interface UploadResult {
 
 type Status = "idle" | "dragging" | "uploading" | "success" | "error";
 
-export default function UploadZone() {
+type UploadTarget = "homepage" | "new" | "existing";
+
+interface CollectionOption {
+  id: number;
+  title: string;
+}
+
+interface Props {
+  /** 是否显示上传目标选择器 */
+  showTargetSelector?: boolean;
+}
+
+export default function UploadZone({ showTargetSelector = false }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [results, setResults] = useState<UploadResult[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 上传目标选择
+  const [targetType, setTargetType] = useState<UploadTarget>("homepage");
+  const [newTitle, setNewTitle] = useState("");
+  const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
+  const [collections, setCollections] = useState<CollectionOption[]>([]);
+
+  // 获取已有摄影集列表
+  useEffect(() => {
+    if (!showTargetSelector) return;
+    fetch("/api/collections")
+      .then((res) => res.json())
+      .then((data: CollectionOption[]) => setCollections(data))
+      .catch(console.error);
+  }, [showTargetSelector]);
 
   /** 批量上传文件 */
   const uploadFiles = useCallback(async (files: FileList | File[]) => {
@@ -62,6 +89,17 @@ export default function UploadZone() {
     try {
       const formData = new FormData();
       validFiles.forEach((f) => formData.append("file", f));
+
+      // 上传目标
+      if (targetType === "new" && newTitle.trim()) {
+        console.log("[UploadZone] appending newCollectionTitle:", newTitle.trim());
+        formData.append("newCollectionTitle", newTitle.trim());
+      } else if (targetType === "existing" && selectedCollectionId) {
+        console.log("[UploadZone] appending collectionId:", selectedCollectionId);
+        formData.append("collectionId", String(selectedCollectionId));
+      } else {
+        console.log("[UploadZone] uploading to homepage (no collection target)");
+      }
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -94,7 +132,7 @@ export default function UploadZone() {
       setErrorMsg(err.message || "上传失败，请重试");
       setStatus("error");
     }
-  }, []);
+  }, [targetType, newTitle, selectedCollectionId]);
 
   // 拖拽事件
   const handleDragOver = (e: React.DragEvent) => {
@@ -123,6 +161,60 @@ export default function UploadZone() {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
+      {/* ---- 上传目标选择器 ---- */}
+      {showTargetSelector && status === "idle" && (
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-400 mr-1">上传到</span>
+          {(["homepage", "new", "existing"] as UploadTarget[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTargetType(t)}
+              className={`
+                text-xs px-3 py-1.5 rounded-full transition-colors
+                ${
+                  targetType === t
+                    ? "bg-gray-800 text-white"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }
+              `}
+            >
+              {t === "homepage" && "首页"}
+              {t === "new" && "新建摄影集"}
+              {t === "existing" && "已有摄影集"}
+            </button>
+          ))}
+
+          {/* 新建摄影集 — 标题输入 */}
+          {targetType === "new" && (
+            <input
+              type="text"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="输入摄影集名称…"
+              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 w-40 focus:outline-none focus:ring-2 focus:ring-gray-200"
+            />
+          )}
+
+          {/* 已有摄影集 — 下拉选择 */}
+          {targetType === "existing" && (
+            <select
+              value={selectedCollectionId || ""}
+              onChange={(e) =>
+                setSelectedCollectionId(e.target.value ? Number(e.target.value) : null)
+              }
+              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-200"
+            >
+              <option value="">选择摄影集…</option>
+              {collections.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
       {/* ---- idle / dragging / uploading 状态：显示上传区 ---- */}
       {status !== "success" && status !== "error" && (
         <div
