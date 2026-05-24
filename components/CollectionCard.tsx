@@ -58,6 +58,7 @@ interface Props {
   photoCount: number;
   progress?: ProgressData;
   version?: number;
+  bookRatio?: string;
   onClick: () => void;
 }
 
@@ -69,6 +70,7 @@ export default function CollectionCard({
   photoCount,
   progress,
   version,
+  bookRatio,
   onClick,
 }: Props) {
   return (
@@ -153,22 +155,27 @@ export default function CollectionCard({
           )}
         </div>
       ) : (
-        /* ---- curated：封面图 ---- */
-        <div className="relative bg-gray-50">
+        /* ---- curated：封面图（按摄影书比例） ---- */
+        <div className="relative bg-gray-50 flex items-center justify-center">
           {coverPhotoId ? (
             <img
               src={`/api/photos/${coverPhotoId}/file`}
               alt={title}
-              className="w-full aspect-[4/3] object-cover"
+              className="w-full object-contain bg-white"
+              style={{ aspectRatio: (bookRatio || "4:5").replace(":", "/") }}
             />
           ) : previewPhotos.length > 0 ? (
             <img
               src={getPhotoUrl(previewPhotos[0])}
               alt={title}
-              className="w-full aspect-[4/3] object-cover"
+              className="w-full object-contain bg-white"
+              style={{ aspectRatio: (bookRatio || "4:5").replace(":", "/") }}
             />
           ) : (
-            <div className="aspect-[4/3] bg-gray-100 flex items-center justify-center">
+            <div
+              className="w-full bg-gray-100 flex items-center justify-center"
+              style={{ aspectRatio: (bookRatio || "4:5").replace(":", "/") }}
+            >
               <span className="text-xs text-gray-400">暂无封面</span>
             </div>
           )}

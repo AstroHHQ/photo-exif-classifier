@@ -15,9 +15,10 @@ interface Props {
   photos: PhotoData[];
   title: string;
   version?: number;
+  bookRatio?: string;
 }
 
-export default function BookViewer({ photos, title, version }: Props) {
+export default function BookViewer({ photos, title, version, bookRatio }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const totalPages = photos.length;
 
@@ -88,14 +89,23 @@ export default function BookViewer({ photos, title, version }: Props) {
         {/* 照片 + 备注（key 驱动 remount 触发入场动画） */}
         <div
           key={currentIndex}
-          className="flex flex-col items-center px-20 py-8 max-w-5xl w-full animate-book-fade-in"
+          className="flex flex-col items-center px-6 py-6 max-w-4xl w-full animate-book-fade-in"
         >
-          <img
-            src={imageUrl}
-            alt={currentPhoto.original_name}
-            className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm"
-            draggable={false}
-          />
+          {/* 摄影书页面容器：按 book_ratio 比例，白色背景 */ }
+          <div
+            className="relative w-full bg-white rounded-lg shadow-sm flex items-center justify-center"
+            style={{
+              aspectRatio: (bookRatio || "4:5").replace(":", "/"),
+              maxHeight: "70vh",
+            }}
+          >
+            <img
+              src={imageUrl}
+              alt={currentPhoto.original_name}
+              className="max-w-full max-h-full object-contain"
+              draggable={false}
+            />
+          </div>
           {currentPhoto.note && (
             <p className="mt-5 text-sm text-gray-500 text-center max-w-lg italic leading-relaxed">
               {currentPhoto.note}

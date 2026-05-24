@@ -23,8 +23,17 @@ interface CollectionDetail {
   status: CollectionStatus;
   cover_photo_id: number | null;
   version: number;
+  book_ratio: string;
   photos: PhotoData[];
 }
+
+/** 摄影书比例预设 */
+const RATIO_OPTIONS = [
+  { value: "4:5", label: "4:5 竖版" },
+  { value: "1:1", label: "1:1 方形" },
+  { value: "3:2", label: "3:2 横版" },
+  { value: "2:3", label: "2:3 长竖版" },
+] as const;
 
 /** 状态标签映射 */
 const STATUS_LABEL: Record<CollectionStatus, string> = {
@@ -103,6 +112,24 @@ export default function CollectionDetailPage() {
   const handleNext = () => {
     if (currentIndex < photos.length - 1) {
       setSelectedPhotoId(photos[currentIndex + 1].id);
+    }
+  };
+
+  // 切换摄影书比例
+  const handleChangeRatio = async (bookRatio: string) => {
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/collections/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ book_ratio: bookRatio }),
+      });
+      const data = await res.json();
+      setCollection((prev) => (prev ? { ...prev, ...data } : prev));
+    } catch (err) {
+      console.error("比例切换失败:", err);
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -224,6 +251,27 @@ export default function CollectionDetailPage() {
           {photos.length} 张照片
         </p>
 
+        {/* 摄影书比例选择（ready 状态可设置） */}
+        {collection.status === "ready" && (
+          <div className="flex items-center gap-1.5 mt-3">
+            <span className="text-[10px] text-gray-400 shrink-0">比例</span>
+            {RATIO_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleChangeRatio(opt.value)}
+                disabled={updating}
+                className={`text-[10px] px-2 py-1 rounded transition-colors disabled:opacity-50 ${
+                  collection.book_ratio === opt.value
+                    ? "bg-gray-800 text-white"
+                    : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* 状态切换按钮 */}
         <div className="flex items-center gap-2 mt-3">
           {collection.status === "draft" && (
@@ -321,6 +369,7 @@ export default function CollectionDetailPage() {
               photos={photos}
               title={collection.title}
               version={collection.version}
+              bookRatio={collection.book_ratio}
             />
           </div>
         </div>

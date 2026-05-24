@@ -426,6 +426,37 @@ draft 摄影集使用"散落照片"视觉语言，表达仍在整理中的创作
 | ready | 规整 6px 递进偏移堆叠 | 已整理完毕，等待发布 |
 | published | 单张封面图 | 已出版，正式作品集 |
 
+## Book Ratio
+
+published 摄影集支持预设摄影书比例，让封面和阅读体验更像真实摄影书。
+
+### 预设比例
+
+| 值 | 比例 | 名称 | 适用场景 |
+|------|------|------|------|
+| `4:5` | 竖版 | Portrait | 默认，适合大多数人像/竖构图作品 |
+| `1:1` | 方形 | Square | 方形构图，Instagram 风格 |
+| `3:2` | 横版 | Landscape | 横幅风光作品 |
+| `2:3` | 长竖版 | Tall Book | 高挑竖构图，时装/建筑 |
+
+### 生效范围
+
+- **CollectionCard**：published 封面按比例显示（`object-contain`，白色背景，不裁切）
+- **BookViewer**：照片容器按比例约束，图片 `object-contain` 适配，留白作为"书页"
+- **默认值**：`4:5`（新创建 + 旧数据迁移）
+
+### 设置方式
+
+- ready 状态详情页显示比例选择器（4 个 pill 按钮）
+- 点击即时 PATCH 更新 `collections.book_ratio`
+- 发布时无需额外操作，当前设置的比例自动生效
+
+### 设计原则
+
+- 不裁切图片（`object-contain` 而非 `object-cover`）
+- 白色背景模拟摄影书页面
+- 仅支持预设比例，不允许自由输入，保持视觉一致性
+
 ---
 
 ## Debug Lessons
@@ -566,6 +597,7 @@ draft 摄影集使用"散落照片"视觉语言，表达仍在整理中的创作
 | `cover_photo_id` | INTEGER | 封面照片 ID，可为空 |
 | `sort_order` | TEXT | 照片排序 JSON 数组 `[photoId, ...]` |
 | `version` | INTEGER | 发布版本号，默认 1，每次发布 +1 |
+| `book_ratio` | TEXT | 摄影书比例，默认 `4:5`，可选 `1:1` `3:2` `2:3` |
 | `created_at` | TEXT | 创建时间，默认当前时间 |
 
 ## 开始使用

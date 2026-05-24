@@ -86,6 +86,10 @@ function initTables(db: Database.Database) {
   try {
     db.exec(`ALTER TABLE photos ADD COLUMN storage_mode TEXT NOT NULL DEFAULT 'copied'`);
   } catch { /* 列已存在，忽略 */ }
+  // 兼容旧数据库：如果 book_ratio 列不存在则添加
+  try {
+    db.exec(`ALTER TABLE collections ADD COLUMN book_ratio TEXT NOT NULL DEFAULT '4:5'`);
+  } catch { /* 列已存在，忽略 */ }
 }
 
 /** 照片记录的类型定义 */
@@ -117,6 +121,7 @@ export interface Collection {
   cover_photo_id: number | null;
   sort_order: string; // JSON 数组 [photoId, ...]
   version: number;
+  book_ratio: string; // "4:5" | "1:1" | "3:2" | "2:3"
   created_at: string;
 }
 
@@ -224,6 +229,7 @@ export function updateCollection(
     cover_photo_id?: number | null;
     sort_order?: string;
     version?: number;
+    book_ratio?: string;
   }
 ): Collection | undefined {
   const d = getDb();
@@ -253,6 +259,10 @@ export function updateCollection(
   if (data.version !== undefined) {
     fields.push("version = @version");
     values.version = data.version;
+  }
+  if (data.book_ratio !== undefined) {
+    fields.push("book_ratio = @book_ratio");
+    values.book_ratio = data.book_ratio;
   }
 
   if (fields.length === 0) return getCollectionById(id);

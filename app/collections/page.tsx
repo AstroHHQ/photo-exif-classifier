@@ -17,6 +17,7 @@ interface CollectionData {
   description: string;
   status: "draft" | "ready" | "published";
   cover_photo_id: number | null;
+  book_ratio: string;
   previewPhotos: PhotoData[];
   photoCount: number;
   version: number;
@@ -75,6 +76,7 @@ export default function CollectionsPage() {
             photoCount={c.photoCount}
             progress={c.progress}
             version={c.version}
+            bookRatio={c.book_ratio}
             onClick={() => router.push(`/collections/${c.id}`)}
           />
         ))}
