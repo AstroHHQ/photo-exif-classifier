@@ -13,9 +13,9 @@ interface StatItem {
   count: number;
 }
 
-/** 月度拍摄计数 */
-export interface MonthlyCount {
-  month: string; // "2026-05"
+/** 单日拍摄计数 */
+export interface DailyCount {
+  date: string; // "2026-05-26"
   count: number;
 }
 
@@ -28,8 +28,8 @@ export interface Stats {
   apertures: StatItem[];
   shutterSpeeds: StatItem[];
   totalPhotos: number;
-  /** 月度拍摄活跃度（最近 12 个月） */
-  monthlyCounts: MonthlyCount[];
+  /** 每日拍摄活跃度（最近 365 天，用于热力图） */
+  dailyActivity: DailyCount[];
   /** 最近一次拍摄日期 */
   lastPhotoDate: string | null;
   /** 最近 30 天拍摄数量 */
@@ -49,24 +49,14 @@ function label(val: unknown): string {
  * - SQLite datetime: "2026-05-22 14:14:43"
  */
 function parseDate(raw: string): Date | null {
-  // SQLite datetime "YYYY-MM-DD HH:mm:ss" → ISO "YYYY-MM-DDTHH:mm:ss"
   const iso = raw.includes("T") ? raw : raw.replace(" ", "T");
   const d = new Date(iso);
   return isNaN(d.getTime()) ? null : d;
 }
 
-/**
- * 获取可用于统计的日期。
- * 优先 date_taken（EXIF），为 null 时 fallback 到 created_at（上传时间）。
- */
-function getPhotoDate(p: Photo): { date: Date; dateStr: string } | null {
-  const raw = p.date_taken || p.created_at;
-  if (!raw) return null;
-  const d = parseDate(raw);
-  if (!d) return null;
-  // 统一 month key 格式：YYYY-MM
-  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  return { date: d, dateStr: key };
+/** 格式化日期为 YYYY-MM-DD */
+function formatDayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export function getStats(): Stats {
@@ -84,13 +74,13 @@ export function getStats(): Stats {
       .sort((a, b) => b.count - a.count);
   };
 
-  // 月度拍摄活跃度（最近 12 个月）
+  // 每日拍摄活跃度（最近 365 天）
   const now = new Date();
-  const monthlyMap: Record<string, number> = {};
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    monthlyMap[key] = 0;
+  const dailyMap: Record<string, number> = {};
+  for (let i = 364; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    dailyMap[formatDayKey(d)] = 0;
   }
 
   let lastPhotoDate: string | null = null;
@@ -98,27 +88,29 @@ export function getStats(): Stats {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   for (const p of photos) {
-    const pd = getPhotoDate(p);
-    if (!pd) continue;
+    const raw = p.date_taken || p.created_at;
+    if (!raw) continue;
+    const d = parseDate(raw);
+    if (!d) continue;
 
-    if (monthlyMap[pd.dateStr] !== undefined) {
-      monthlyMap[pd.dateStr]++;
+    const dayKey = formatDayKey(d);
+    if (dailyMap[dayKey] !== undefined) {
+      dailyMap[dayKey]++;
     }
 
-    // 最近拍摄日期取原始字符串（date_taken 优先，用于 UI 展示）
     const rawDate = p.date_taken || p.created_at;
     if (!lastPhotoDate || rawDate > lastPhotoDate) {
       lastPhotoDate = rawDate;
     }
 
-    if (pd.date >= thirtyDaysAgo) {
+    if (d >= thirtyDaysAgo) {
       recentCount++;
     }
   }
 
-  const monthlyCounts: MonthlyCount[] = Object.entries(monthlyMap).map(
-    ([month, count]) => ({ month, count })
-  );
+  const dailyActivity: DailyCount[] = Object.entries(dailyMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, count]) => ({ date, count }));
 
   return {
     cameras: aggregate((p) => p.camera_model || (p as any).Make),
@@ -128,7 +120,7 @@ export function getStats(): Stats {
     apertures: aggregate((p) => p.aperture),
     shutterSpeeds: aggregate((p) => p.shutter_speed),
     totalPhotos: photos.length,
-    monthlyCounts,
+    dailyActivity,
     lastPhotoDate,
     recentCount,
   };

@@ -590,10 +590,9 @@ StatsPanel 是摄影档案可视化，不是后台数据分析仪表盘。
 
 | 元素 | 形式 | 目的 |
 |------|------|------|
-| 月度活跃度 | 12 月迷你柱状图（GitHub contribution 风格） | 一眼看到拍摄节奏 |
+| 每日活跃度 | 365 天热力图（GitHub contribution 风格） | 一眼看到创作节奏 |
 | 相机占比 | 横向灰度占比条 + 百分比 | 了解主力设备 |
 | 焦段分布 | 横向占比条（Top 5） | 摄影语言倾向 |
-| ISO 分布 | 横向占比条（Top 3） | 常用感光度 |
 | 最近拍摄 | 最近一次日期 + 30 天计数 | 活跃状态感知 |
 
 ### 颜色系统
@@ -612,11 +611,42 @@ StatsPanel 是摄影档案可视化，不是后台数据分析仪表盘。
 ### 信息层级
 
 - 大数字（`text-2xl font-light`）：照片总数
-- 迷你图（`h-12`）：月度活跃度，一目了然无需阅读
-- 占比条 + 百分比：相机/焦段/ISO 分布
+- 热力图（365 个 `w-3 h-3` 格子）：每日活跃度，一眼看懂无需阅读
+- 占比条 + 百分比：相机/焦段分布
 - 小标签（`text-[10px]`）：区段标题
 
 用户应一眼看懂，而非阅读数据库。
+
+---
+
+## Activity Heatmap System
+
+拍摄活跃度以 GitHub contribution 风格热力图展示。每个格子代表一天，颜色深浅代表当天拍摄数量。
+
+### 布局
+
+- **横向**：53 周列（从周日开始对齐）
+- **纵向**：7 行（Sun – Sat）
+- **格子尺寸**：`w-3 h-3`，`gap-[2px]`，`rounded-sm`
+- **月份标签**：顶部浮动显示 Jan/Feb/Mar…
+- **星期标签**：左侧仅显示 Mon、Wed、Fri
+
+### 颜色映射（全灰度）
+
+| 拍摄数量 | 颜色 |
+|------|------|
+| 0 张 | `bg-gray-100` |
+| 1–2 张 | `bg-gray-300` |
+| 3–5 张 | `bg-gray-500` |
+| 6+ 张 | `bg-gray-800` |
+
+### Hover
+
+hover 格子显示 tooltip：`2026-05-14 · 12 张`。深色底白字，`text-[10px]`，`fixed` 定位跟随鼠标。
+
+### 目标气质
+
+摄影创作日历。不是：dashboard chart / BI 图 / 彩色 analytics。
 
 ---
 
@@ -652,6 +682,61 @@ ExifReader 返回的 DateTimeOriginal 可能是：
 
 - **柱状图全空**：CSS `height: 2%` 在 flex 容器中解析为 0px。根因：flex child 的百分比高度不继承父容器显式高度。修复：改用 JavaScript 计算 px 值。
 - **month key 不匹配**：`getMonth()` 返回 0-11，需 +1 并 `padStart(2, "0")`。疏漏会导致 `"2026-4"` 不匹配 `"2026-04"` 而数据丢失。
+
+---
+
+## Heatmap Data Logic
+
+热力图的数据聚合和渲染规则，与柱状图时期有本质区别。
+
+### 数据结构
+
+`dailyActivity: DailyCount[]` — 最近 365 天，每天一条记录：
+
+```typescript
+interface DailyCount {
+  date: string; // "2026-05-26"（YYYY-MM-DD 格式）
+  count: number;
+}
+```
+
+### 日期来源
+
+使用 `parseDate()` + `formatDayKey()`：
+1. `photos.date_taken`（EXIF DateTimeOriginal）
+2. fallback `photos.created_at`（SQLite 上传时间）
+3. 生成 `YYYY-MM-DD` 格式 key
+
+### Week/Grid 构建
+
+- 365 天数组按时间顺序排列
+- 补齐开头到 Sunday（用 `null` 填充），使第一列从周日开始
+- 每 7 天一组切成 53 个 week
+- 补齐后的 `null` 项渲染为 `bg-transparent`（不可见）
+
+### 灰度映射规则
+
+| count | CSS class |
+|------|------|
+| `null`（补齐空白） | `bg-transparent` |
+| `0` | `bg-gray-100` |
+| `1–2` | `bg-gray-300` |
+| `3–5` | `bg-gray-500` |
+| `6+` | `bg-gray-800` |
+
+### 与旧柱状图的区别
+
+| | 旧（monthlyCounts） | 新（dailyActivity） |
+|------|------|------|
+| 粒度 | 月 | 日 |
+| 时间范围 | 12 个月 | 365 天 |
+| 视觉 | 柱状高度 | 格子颜色深浅 |
+| 渲染 | CSS 百分比高度（不可靠） | 纯颜色 class（可靠） |
+
+### 已踩过的坑
+
+- **monthlyCounts 反向依赖**：曾用 `monthlyCounts` 字段名，热力图需要 `dailyActivity`。修改 Stats 接口时需同步更新组件端的 `StatsData` 接口，否则类型不匹配。
+- **补齐逻辑**：如果不补齐开头到 Sunday，网格的第一列可能从周三开始，破坏 GitHub contribution 风格的对齐。必须 `Array(startDay).fill(null)` 补齐。
 
 ---
 
