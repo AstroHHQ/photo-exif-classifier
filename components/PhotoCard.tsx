@@ -3,12 +3,8 @@
 /**
  * PhotoCard —— 单张照片卡片。
  *
- * 展示缩略图和底部简要 EXIF：
- * - 左侧：相机型号
- * - 右侧：焦距 · 光圈
- * - 悬停时阴影加深
- *
- * 通过 getPhotoUrl() 统一获取照片 URL（兼容 copied / referenced 模式）。
+ * 照片优先：默认只展示照片本身（rounded-none，相纸感）。
+ * hover 时底部浮现 metadata overlay + 右上角浮现操作图标。
  */
 
 import { useState } from "react";
@@ -35,23 +31,17 @@ export interface PhotoData {
 
 interface Props {
   photo: PhotoData;
-  /** 点击整张卡片时回调 */
   onPhotoClick?: () => void;
-  /** 显示排序按钮（仅在摄影集详情页使用） */
   showSortControls?: boolean;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   isFirst?: boolean;
   isLast?: boolean;
-  /** 显示"设为封面"按钮（仅在摄影集详情页使用） */
   showCoverButton?: boolean;
   onSetCover?: () => void;
   isCover?: boolean;
-  /** 删除照片回调 */
   onDelete?: () => void;
-  /** 可选摄影集列表（用于导入选择，仅未归档照片显示） */
   collections?: { id: number; title: string }[];
-  /** 导入到摄影集回调 */
   onImportToCollection?: (photoId: number, collectionId: number) => void;
 }
 
@@ -75,19 +65,31 @@ export default function PhotoCard({
   const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
   const imageUrl = getPhotoUrl(photo);
 
+  const metaLine = [
+    photo.camera_model || "未知相机",
+    photo.focal_length,
+    photo.aperture,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const hasHoverActions =
+    (collections !== undefined && photo.collection_id == null && collections.length > 0) ||
+    onDelete;
+
   return (
     <div
       onClick={onPhotoClick}
       className={`
-        break-inside-avoid mb-6
+        break-inside-avoid mb-8 group
         bg-white rounded-xl border border-gray-100
-        shadow-sm hover:shadow-md
-        transition-shadow duration-200
-        overflow-hidden
+        shadow-sm hover:shadow-lg
+        transition-all duration-200
+        hover:-translate-y-0.5
         ${onPhotoClick ? "cursor-pointer" : ""}
       `}
     >
-      {/* 缩略图区 */}
+      {/* 照片区 */}
       <div className="relative bg-gray-50">
         {!loaded && (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -98,32 +100,132 @@ export default function PhotoCard({
           src={imageUrl}
           alt={photo.original_name}
           onLoad={() => setLoaded(true)}
-          className={`w-full block transition-opacity duration-300 ${
+          className={`w-full block rounded-none transition-opacity duration-300 ${
             loaded ? "opacity-100" : "opacity-0"
           }`}
         />
+
+        {/* hover：底部 metadata overlay */}
+        <div
+          className="
+            absolute inset-x-0 bottom-0
+            opacity-0 group-hover:opacity-100
+            transition-opacity duration-200
+            bg-gradient-to-t from-black/60 via-black/20 to-transparent
+            pt-10 pb-3 px-3 pointer-events-none
+          "
+        >
+          <span className="text-[11px] text-white/90 truncate block">
+            {metaLine}
+          </span>
+          {photo.note && (
+            <p className="text-[10px] text-white/70 truncate mt-0.5">
+              {photo.note}
+            </p>
+          )}
+        </div>
+
+        {/* hover：右上角操作图标 */}
+        {hasHoverActions && (
+          <div
+            className="
+              absolute top-2 right-2 flex items-center gap-1.5
+              opacity-0 group-hover:opacity-100
+              transition-opacity duration-200
+            "
+          >
+            {collections !== undefined &&
+              photo.collection_id == null &&
+              collections.length > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowImport(true);
+                  }}
+                  className="w-6 h-6 rounded-full bg-black/40 text-white text-xs flex items-center justify-center hover:bg-black/60 transition-colors"
+                  title="导入摄影集"
+                >
+                  +
+                </button>
+              )}
+            {onDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="w-6 h-6 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-red-500 transition-colors"
+                title="删除照片"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* 底部 EXIF 信息 */}
-      <div className="px-3 py-2.5 flex items-center justify-between">
-        <span className="text-xs text-gray-600 truncate max-w-[60%]">
-          {photo.camera_model || "未知相机"}
-        </span>
-        <span className="text-xs text-gray-400 shrink-0">
-          {[photo.focal_length, photo.aperture].filter(Boolean).join(" · ") || "—"}
-        </span>
-      </div>
+      {/* 导入摄影集展开（独立于 hover，始终可见状态） */}
+      {collections !== undefined &&
+        photo.collection_id == null &&
+        showImport && (
+          <div className="px-3 py-2.5 border-t border-gray-50">
+            {collections.length === 0 ? (
+              <span className="text-[10px] text-gray-300">
+                暂无可编辑摄影集
+              </span>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={selectedCollectionId ?? ""}
+                  onChange={(e) =>
+                    setSelectedCollectionId(Number(e.target.value))
+                  }
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[10px] border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-600 flex-1 min-w-0"
+                >
+                  <option value="" disabled>
+                    选择摄影集
+                  </option>
+                  {collections.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title || "未命名摄影集"}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (selectedCollectionId != null) {
+                      onImportToCollection?.(photo.id, selectedCollectionId);
+                      setShowImport(false);
+                      setSelectedCollectionId(null);
+                    }
+                  }}
+                  disabled={selectedCollectionId == null}
+                  className="text-[10px] px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-30 disabled:cursor-default transition-colors shrink-0"
+                >
+                  确认
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowImport(false);
+                    setSelectedCollectionId(null);
+                  }}
+                  className="text-[10px] px-2 py-1 rounded text-gray-400 hover:text-gray-500 transition-colors shrink-0"
+                >
+                  取消
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* 备注预览 */}
-      {photo.note && (
-        <p className="text-[10px] text-gray-500 truncate px-3 pb-2 leading-tight">
-          {photo.note}
-        </p>
-      )}
-
-      {/* 排序按钮（仅摄影集内显示） */}
+      {/* 排序按钮（仅摄影集编辑模式，始终可见） */}
       {showSortControls && (
-        <div className="flex items-center gap-1 px-3 pb-2.5">
+        <div className="flex items-center gap-1 px-3 py-2.5 border-t border-gray-50">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -159,79 +261,6 @@ export default function PhotoCard({
               {isCover ? "✓ 封面" : "设为封面"}
             </button>
           )}
-        </div>
-      )}
-
-      {/* 导入摄影集（仅未归档照片 + 首页使用场景时显示） */}
-      {collections !== undefined && photo.collection_id == null && (
-        <div className="px-3 pb-2.5">
-          {collections.length === 0 ? (
-            <span className="text-[10px] text-gray-300">暂无可编辑摄影集</span>
-          ) : !showImport ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowImport(true);
-              }}
-              className="text-[10px] px-2 py-1 rounded text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-            >
-              导入摄影集
-            </button>
-          ) : (
-            <div className="flex items-center gap-1.5">
-              <select
-                value={selectedCollectionId ?? ""}
-                onChange={(e) => setSelectedCollectionId(Number(e.target.value))}
-                onClick={(e) => e.stopPropagation()}
-                className="text-[10px] border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-600 flex-1 min-w-0"
-              >
-                <option value="" disabled>选择摄影集</option>
-                {collections.map((c) => (
-                  <option key={c.id} value={c.id}>{c.title || "未命名摄影集"}</option>
-                ))}
-              </select>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (selectedCollectionId != null) {
-                    onImportToCollection?.(photo.id, selectedCollectionId);
-                    setShowImport(false);
-                    setSelectedCollectionId(null);
-                  }
-                }}
-                disabled={selectedCollectionId == null}
-                className="text-[10px] px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-30 disabled:cursor-default transition-colors shrink-0"
-              >
-                确认
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowImport(false);
-                  setSelectedCollectionId(null);
-                }}
-                className="text-[10px] px-2 py-1 rounded text-gray-400 hover:text-gray-500 transition-colors shrink-0"
-              >
-                取消
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 删除按钮 */}
-      {onDelete && (
-        <div className="px-3 pb-2.5">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="text-[10px] px-2 py-1 rounded text-red-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-            title="删除照片"
-          >
-            删除
-          </button>
         </div>
       )}
     </div>
