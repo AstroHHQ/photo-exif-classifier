@@ -72,7 +72,7 @@ export default function PhotoGrid({ photos: externalPhotos, onPhotoClick, showSo
   // 瀑布流 — CSS columns 实现
   // columns-1 sm:columns-2 lg:columns-3 xl:columns-4
   return (
-    <div className="w-full max-w-7xl mx-auto columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6">
+    <div className="w-full max-w-7xl mx-auto columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-8">
       {photos.map((photo) => (
         <PhotoCard
           key={photo.id}

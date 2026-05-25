@@ -275,12 +275,15 @@ export function updateCollection(
 
 /**
  * 获取未归档照片（collection_id IS NULL）。
+ * sort: "newest"（默认，按拍摄时间倒序）| "oldest"（按拍摄时间正序）
+ * 排序使用 COALESCE(date_taken, created_at) 确保无 EXIF 的照片也能正确排序。
  */
-export function getUnarchivedPhotos(): Photo[] {
+export function getUnarchivedPhotos(sort: "newest" | "oldest" = "newest"): Photo[] {
   const d = getDb();
+  const dir = sort === "oldest" ? "ASC" : "DESC";
   return d
     .prepare(
-      "SELECT * FROM photos WHERE collection_id IS NULL ORDER BY date_taken DESC, id DESC"
+      `SELECT * FROM photos WHERE collection_id IS NULL ORDER BY COALESCE(date_taken, created_at) ${dir}, id ${dir}`
     )
     .all() as Photo[];
 }

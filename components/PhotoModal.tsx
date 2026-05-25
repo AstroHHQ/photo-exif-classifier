@@ -1,20 +1,16 @@
 "use client";
 
 /**
- * PhotoModal —— 照片详情弹窗。
+ * PhotoModal —— 照片详情灯箱。
  *
- * 功能：
- * - 左图右 EXIF，全屏遮罩
- * - 键盘 Esc 关闭，← → 切换前后照片
- * - 按住空格键直接录音，松开停止并填入备注框
- * - 备注编辑 + 🎤 按钮手动录音
+ * 沉浸式照片浏览：暗色背景、照片保持原始直角、信息面板轻量。
+ * 键盘 Esc 关闭，← → 切换前后照片。
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { PhotoData } from "./PhotoCard";
 import { getPhotoUrl } from "@/lib/file";
 
-/** 检测浏览器是否支持语音识别 */
 const SpeechRecognitionAPI =
   typeof window !== "undefined"
     ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -30,7 +26,6 @@ interface Props {
   onNoteChange: (photoId: number, note: string) => void;
 }
 
-/** EXIF 显示字段 */
 const EXIF_FIELDS: { label: string; key: keyof PhotoData }[] = [
   { label: "相机型号", key: "camera_model" },
   { label: "镜头", key: "lens_model" },
@@ -49,18 +44,15 @@ export default function PhotoModal({
   onNext,
   onNoteChange,
 }: Props) {
-  // 备注编辑状态
   const [editing, setEditing] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  // 语音识别
   const [listening, setListening] = useState(false);
   const [interimText, setInterimText] = useState("");
   const recognitionRef = useRef<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // refs 用于在事件回调中读取最新 state（避免闭包过期）
   const editingRef = useRef(editing);
   editingRef.current = editing;
   const listeningRef = useRef(listening);
@@ -70,7 +62,6 @@ export default function PhotoModal({
   const noteDraftRef = useRef(noteDraft);
   noteDraftRef.current = noteDraft;
 
-  /** 执行保存（供 debounce 和 flush 共用） */
   const doSave = useCallback(() => {
     const p = photoRef.current;
     const draft = noteDraftRef.current;
@@ -80,7 +71,6 @@ export default function PhotoModal({
     setSaveStatus("saved");
   }, [onNoteChange]);
 
-  /** 清除 debounce 定时器 */
   const clearSaveTimer = useCallback(() => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
@@ -88,7 +78,6 @@ export default function PhotoModal({
     }
   }, []);
 
-  // 重置编辑状态（照片切换时）
   useEffect(() => {
     setEditing(false);
     setNoteDraft("");
@@ -98,7 +87,6 @@ export default function PhotoModal({
     clearSaveTimer();
   }, [photo?.id, clearSaveTimer]);
 
-  // 自动保存：停止输入 1 秒后触发
   useEffect(() => {
     if (!editing) return;
     clearSaveTimer();
@@ -117,7 +105,6 @@ export default function PhotoModal({
 
   const index = photo ? photos.indexOf(photo) : -1;
 
-  // ---- 语音识别 ----
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
@@ -163,14 +150,12 @@ export default function PhotoModal({
     setListening(true);
   }, [stopListening]);
 
-  /** 进入编辑模式 */
   const handleStartEdit = useCallback(() => {
     const p = photoRef.current;
     setNoteDraft(p?.note || "");
     setEditing(true);
   }, []);
 
-  // 键盘：Esc / ← / →
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -180,7 +165,6 @@ export default function PhotoModal({
     [onClose, onPrev, onNext]
   );
 
-  // 主体键盘绑定 + body scroll lock
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
     document.body.style.overflow = "hidden";
@@ -191,16 +175,13 @@ export default function PhotoModal({
     };
   }, [handleKeyDown, stopListening]);
 
-  // ---- 空格键录音 ----
   useEffect(() => {
     const handleSpaceDown = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
-      // 用户正在 textarea 打字时不拦截
       if (document.activeElement === textareaRef.current) return;
 
       e.preventDefault();
 
-      // 不在编辑模式则自动进入
       if (!editingRef.current) {
         const p = photoRef.current;
         if (p) {
@@ -209,7 +190,6 @@ export default function PhotoModal({
         }
       }
 
-      // 有语音支持则开始录音
       if (isSpeechSupported && !listeningRef.current) {
         startListening();
       }
@@ -239,7 +219,6 @@ export default function PhotoModal({
 
   const imageUrl = getPhotoUrl(photo);
 
-  /** 完成编辑：立即保存并退出 */
   const handleFinish = useCallback(() => {
     clearSaveTimer();
     doSave();
@@ -248,83 +227,81 @@ export default function PhotoModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+      className="fixed inset-0 z-50 bg-black/92 flex animate-modal-in"
       onClick={onClose}
     >
+      {/* 左侧：照片（无容器裁切，直角） */}
+      <div className="flex-1 flex items-center justify-center min-w-0" onClick={(e) => e.stopPropagation()}>
+        <img
+          src={imageUrl}
+          alt={photo.original_name}
+          className="max-w-full max-h-[92vh] object-contain rounded-none"
+          draggable={false}
+        />
+      </div>
+
+      {/* 右侧：信息面板 */}
       <div
-        className="bg-white rounded-2xl overflow-hidden flex flex-col md:flex-row max-w-5xl w-full max-h-[90vh]"
+        className="w-80 shrink-0 bg-white flex flex-col max-h-full"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 左侧：照片 */}
-        <div className="flex-1 bg-gray-50 flex items-center justify-center min-h-[300px]">
-          <img
-            src={imageUrl}
-            alt={photo.original_name}
-            className="max-w-full max-h-[90vh] object-contain"
-          />
-        </div>
-
-        {/* 右侧：信息面板 */}
-        <div className="w-full md:w-80 p-6 overflow-y-auto relative shrink-0">
-          {/* 关闭按钮 */}
+        {/* 关闭 + 导航 */}
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-50">
+          <button
+            onClick={onPrev}
+            disabled={index <= 0}
+            className="text-xs py-1.5 px-3 rounded-lg border border-gray-100 text-gray-400 disabled:opacity-30 disabled:cursor-default hover:text-gray-600 hover:border-gray-200 transition-colors"
+          >
+            ←
+          </button>
+          <button
+            onClick={onNext}
+            disabled={index >= photos.length - 1}
+            className="text-xs py-1.5 px-3 rounded-lg border border-gray-100 text-gray-400 disabled:opacity-30 disabled:cursor-default hover:text-gray-600 hover:border-gray-200 transition-colors"
+          >
+            →
+          </button>
+          <span className="text-[10px] text-gray-300 ml-auto">
+            {index + 1} / {photos.length}
+          </span>
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-300 hover:text-gray-500 transition-colors ml-2"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none" viewBox="0 0 24 24"
-              stroke="currentColor" strokeWidth="2"
-            >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+        </div>
 
-          {/* 导航按钮 */}
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={onPrev}
-              disabled={index <= 0}
-              className="flex-1 text-xs py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-30 disabled:cursor-default hover:bg-gray-50 transition-colors"
-            >
-              ← 上一张
-            </button>
-            <button
-              onClick={onNext}
-              disabled={index >= photos.length - 1}
-              className="flex-1 text-xs py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-30 disabled:cursor-default hover:bg-gray-50 transition-colors"
-            >
-              下一张 →
-            </button>
-          </div>
-
+        {/* 可滚动内容 */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
           {/* 文件名 */}
-          <h3 className="text-sm font-semibold mb-4 text-gray-900">
+          <h3 className="text-sm font-medium text-gray-700 mb-4 truncate">
             {photo.original_name}
           </h3>
 
-          {/* EXIF 列表 */}
+          {/* EXIF */}
           <dl className="space-y-0">
             {EXIF_FIELDS.map(({ label, key }) => (
               <div key={key} className="flex justify-between py-2 border-b border-gray-50 last:border-0">
-                <dt className="text-xs text-gray-400">{label}</dt>
-                <dd className="text-sm text-gray-700">
+                <dt className="text-[11px] text-gray-400">{label}</dt>
+                <dd className="text-xs text-gray-600 text-right max-w-[55%] truncate">
                   {photo[key] != null ? String(photo[key]) : "—"}
                 </dd>
               </div>
             ))}
           </dl>
 
-          {/* 分隔线 */}
-          <hr className="my-4 border-gray-100" />
+          <hr className="my-4 border-gray-50" />
 
-          {/* 备注区域 */}
+          {/* 备注 */}
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-500 font-medium">备注</span>
+            <span className="text-[11px] text-gray-400 font-medium">备注</span>
             {!editing && (
               <button
                 onClick={handleStartEdit}
-                className="text-xs text-blue-500 hover:text-blue-600 transition-colors"
+                className="text-[11px] text-blue-500 hover:text-blue-600 transition-colors"
               >
                 编辑
               </button>
@@ -345,10 +322,9 @@ export default function PhotoModal({
                   setNoteDraft(userInput);
                 }}
                 placeholder="添加备注…"
-                className="w-full rounded-xl border border-gray-200 text-sm p-3 text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none"
+                className="w-full rounded-lg border border-gray-200 text-xs p-2.5 text-gray-600 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-100 resize-none"
               />
               <div className="flex items-center justify-between mt-2">
-                {/* 语音按钮 */}
                 {isSpeechSupported && (
                   <button
                     onMouseDown={startListening}
@@ -357,13 +333,13 @@ export default function PhotoModal({
                     onTouchStart={startListening}
                     onTouchEnd={stopListening}
                     className={`
-                      w-8 h-8 rounded-full flex items-center justify-center transition-colors
+                      w-7 h-7 rounded-full flex items-center justify-center transition-colors
                       ${listening ? "bg-red-500 animate-pulse" : "bg-gray-100 hover:bg-gray-200"}
                     `}
                     title={listening ? "录音中…" : "按住录音（或按住空格键）"}
                   >
                     <svg
-                      className={`w-4 h-4 ${listening ? "text-white" : "text-gray-500"}`}
+                      className={`w-3.5 h-3.5 ${listening ? "text-white" : "text-gray-400"}`}
                       fill="none" viewBox="0 0 24 24"
                       stroke="currentColor" strokeWidth="2"
                     >
@@ -390,7 +366,7 @@ export default function PhotoModal({
                 </span>
                 <button
                   onClick={handleFinish}
-                  className="text-xs text-gray-500 rounded-lg px-3 py-1.5 hover:bg-gray-100 transition-colors"
+                  className="text-[11px] text-gray-500 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors"
                 >
                   完成
                 </button>
@@ -398,13 +374,24 @@ export default function PhotoModal({
             </>
           ) : (
             <p
-              className={`text-sm ${photo.note ? "text-gray-600" : "text-gray-400 italic"}`}
+              className={`text-xs ${photo.note ? "text-gray-500" : "text-gray-300 italic"}`}
             >
               {photo.note || "暂无备注"}
             </p>
           )}
         </div>
       </div>
+
+      {/* 入场动画 */}
+      <style>{`
+        @keyframes modalIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .animate-modal-in {
+          animation: modalIn 0.2s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
