@@ -93,7 +93,7 @@ export default function BookViewer({ photos, title, version, bookRatio }: Props)
         >
           {/* 摄影书页面容器：按 book_ratio 比例，白色背景 */ }
           <div
-            className="relative w-full bg-white rounded-lg shadow-sm flex items-center justify-center"
+            className="relative w-full bg-white rounded-lg shadow-sm"
             style={{
               aspectRatio: (bookRatio || "4:5").replace(":", "/"),
               maxHeight: "70vh",
@@ -102,7 +102,7 @@ export default function BookViewer({ photos, title, version, bookRatio }: Props)
             <img
               src={imageUrl}
               alt={currentPhoto.original_name}
-              className="max-w-full max-h-full object-contain"
+              className="absolute inset-0 w-full h-full object-contain"
               draggable={false}
             />
           </div>

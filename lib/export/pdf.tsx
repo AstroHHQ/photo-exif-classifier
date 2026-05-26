@@ -60,30 +60,40 @@ function buildStyles(ratio: string) {
       color: "#999999",
       marginTop: 8,
     },
-    /* ---- 照片 + caption ---- */
-    imageContainer: {
+    /* ---- 内容列（imageArea + captionArea）---- */
+    contentColumn: {
       flex: 1,
+      flexDirection: "column",
+    },
+    /* ---- 图片区域 ---- */
+    imageArea: {
+      flex: 1,
+      overflow: "hidden",
       alignItems: "center",
       justifyContent: "center",
-      paddingTop: 36,
+      paddingTop: 24,
       paddingRight: 36,
       paddingBottom: 12,
       paddingLeft: 36,
     },
     photoImage: {
+      objectFit: "contain",
       maxWidth: "100%",
       maxHeight: "100%",
-      objectFit: "contain",
+    },
+    /* ---- caption 区域（固定高度，不可跨页）---- */
+    captionArea: {
+      height: 48,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingRight: 36,
+      paddingLeft: 36,
     },
     caption: {
       fontFamily: "SongtiSC",
       fontSize: TYPOGRAPHY.captionSize,
       color: TYPOGRAPHY.captionColor,
       textAlign: "center",
-      paddingTop: 8,
-      paddingRight: 36,
-      paddingBottom: 36,
-      paddingLeft: 36,
     },
     /* ---- 页码 ---- */
     pageNumber: {
@@ -127,15 +137,22 @@ function ImageWithCaptionPage({ page, ratio }: { page: import("./types").Page; r
 
   return (
     <Page size={pageDimensions(ratio)} style={styles.page}>
-      <View style={styles.imageContainer}>
-        {page.imageFilename && (
-          <Image src={page.imageFilename} style={styles.photoImage} />
+      <View style={styles.contentColumn}>
+        {/* 图片区域：flex: 1 填充 caption 之外的所有空间，overflow hidden 防止溢出 */}
+        <View style={styles.imageArea}>
+          {page.imageFilename && (
+            <Image src={page.imageFilename} style={styles.photoImage} />
+          )}
+        </View>
+        {/* caption 区域：固定 48px，不会跨页 */}
+        {page.caption && (
+          <View style={styles.captionArea}>
+            <Text style={styles.caption}>{page.caption}</Text>
+          </View>
         )}
+        {!page.caption && <View style={{ height: 8 }} />}
       </View>
-      {page.caption && (
-        <Text style={styles.caption}>{page.caption}</Text>
-      )}
-      {/* 页码（封面不显示，从第 2 页开始显示） */}
+      {/* 页码（不占用布局空间） */}
       <Text style={styles.pageNumber} render={({ pageNumber }) => `${pageNumber}`} fixed />
     </Page>
   );
@@ -162,8 +179,6 @@ interface PhotoBookProps {
 }
 
 export function PhotoBook({ document: doc }: PhotoBookProps) {
-  // react-pdf 要求 styles 在顶层调用，不能按页面动态创建
-  // 用 ratio 统一设置
   const ratio = doc.ratio || "4:5";
 
   return (

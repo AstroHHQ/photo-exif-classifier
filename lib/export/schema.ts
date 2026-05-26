@@ -9,15 +9,12 @@ import { readFileSync } from "fs";
 import path from "path";
 import type { Collection, Photo } from "@/lib/db";
 import type { BookDocument, Page } from "./types";
+import { optimizeExportImage, type ImageOptimizationStats } from "./image";
 
-/** 从 uploads/ 目录读取照片并转为 base64 data URL */
-function loadImageDataUrl(filename: string): string {
+/** 从 uploads/ 目录读取照片 buffer */
+function loadFileBuffer(filename: string): Buffer {
   const filePath = path.join(process.cwd(), "uploads", filename);
-  const buffer = readFileSync(filePath);
-  const base64 = buffer.toString("base64");
-  const ext = path.extname(filename).toLowerCase();
-  const mime = ext === ".png" ? "image/png" : "image/jpeg";
-  return `data:${mime};base64,${base64}`;
+  return readFileSync(filePath);
 }
 
 /**
@@ -58,9 +55,6 @@ export function buildBookDocument(
     });
   }
 
-  // 加载图片 data URL（仅在 PDF 导出时调用此函数）
-  // 注意：此步骤在服务端 API route 中执行
-
   return {
     title: collection.title || "Untitled",
     ratio: collection.book_ratio || "4:5",
@@ -71,24 +65,61 @@ export function buildBookDocument(
 }
 
 /**
- * 为 BookDocument 的所有页面加载图片 data URL。
- * 分离此步骤是因为 data URL 体积大，不应序列化传递。
+ * 为 BookDocument 的所有页面加载图片并优化为导出尺寸。
+ *
+ * 优化规则：
+ * - 最长边限制 3000px
+ * - JPEG quality 0.85
+ * - 仅在需要时 resize（原图 ≤3000px 则跳过）
+ *
+ * 返回优化后的 BookDocument 和统计信息。
  */
-export function resolveBookImages(doc: BookDocument): BookDocument {
-  return {
-    ...doc,
-    pages: doc.pages.map((page) => {
+export async function resolveBookImages(
+  doc: BookDocument
+): Promise<{ document: BookDocument; imageStats: ImageOptimizationStats }> {
+  let totalOriginalBytes = 0;
+  let totalOptimizedBytes = 0;
+  let imageCount = 0;
+
+  const resolvedPages = await Promise.all(
+    doc.pages.map(async (page) => {
       if (page.imageFilename) {
         try {
-          return {
-            ...page,
-            imageFilename: loadImageDataUrl(page.imageFilename),
-          };
+          const buffer = loadFileBuffer(page.imageFilename);
+          const result = await optimizeExportImage(buffer, page.imageFilename);
+          totalOriginalBytes += result.originalSize;
+          totalOptimizedBytes += result.optimizedSize;
+          imageCount++;
+          return { ...page, imageFilename: result.dataUrl };
         } catch {
-          return { ...page, imageFilename: undefined };
+          // 优化失败时回退到原始 base64（不 resize/compress）
+          try {
+            const buffer = loadFileBuffer(page.imageFilename);
+            const base64 = buffer.toString("base64");
+            const ext = path.extname(page.imageFilename).toLowerCase();
+            const mime = ext === ".png" ? "image/png" : "image/jpeg";
+            return {
+              ...page,
+              imageFilename: `data:${mime};base64,${base64}`,
+            };
+          } catch {
+            return { ...page, imageFilename: undefined };
+          }
         }
       }
       return page;
-    }),
+    })
+  );
+
+  return {
+    document: {
+      ...doc,
+      pages: resolvedPages,
+    },
+    imageStats: {
+      totalOriginalBytes,
+      totalOptimizedBytes,
+      count: imageCount,
+    },
   };
 }
