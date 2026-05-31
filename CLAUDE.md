@@ -5,6 +5,24 @@
 
 ---
 
+## Documentation Hierarchy
+
+本项目有三层文档系统，各司其职：
+
+| 层 | 文件 | 读者 | 内容 |
+|---|------|------|------|
+| 1 | `README.md` | 人类开发者 | 项目概览、技术栈、功能列表、数据流、API 表、数据库结构、启动说明 |
+| 2 | `CLAUDE.md` | AI Agent | 架构规则、UI Philosophy、Bug 教训、Export 规则、开发约束、Change Log |
+| 3 | `~/.claude/projects/.../memory/` | 跨会话持久化 | 用户偏好、项目方向、反馈记录、外部参考 |
+
+**规则：**
+- README 不写 Bug 教训、Agent 规则、UI 禁止事项、AI Memory、Prompt 规范
+- CLAUDE.md 允许非常长 — 它是 AI IDE Context，不是给人读的
+- memory/ 存跨会话持久化偏好，CLAUDE.md 存项目级开发规则
+- 信息不重复 — 同一事实只在一处出现
+
+---
+
 ## Project Overview
 
 本地摄影照片管理工具（Photo Manager MVP）。上传照片 → 自动读取 EXIF → 瀑布流展示 → 参数统计 → 摄影集管理 → 摄影书 PDF 导出。
@@ -30,9 +48,35 @@
 - **Electron 路线**：API Route 暂不迁移 IPC，保留 HTTP 模式便于开发调试
 - **无 ORM**：直接 SQL，COALESCE 处理 date_taken/created_at fallback
 
+### z-index 分层规则
+
+| 层级 | z-index | 用途 |
+|------|---------|------|
+| 普通内容 | 默认 | 页面主体、卡片 |
+| 导航栏 | `z-50` | layout.tsx sticky header |
+| 全屏容器 | `z-[60]` | published 阅读模式、全屏弹窗 |
+
+全屏容器必须高于导航栏（60 > 50），否则 toolbar 按钮被导航栏遮挡。
+
+### storage_mode 架构意义
+
+- `copied`：当前 Web MVP 模式，上传时复制文件到 `uploads/`
+- `referenced`：未来 Electron/mac App 模式，数据库只存路径，不复制文件
+- `lib/file.ts` 提供 `getPhotoUrl(photo)` 抽象层，UI 层不直接拼接文件 URL
+- 未来切换模式只需改 `getPhotoUrl` 实现，UI 层零改动
+
+### BookViewer 与页面状态职责分离
+
+- `BookViewer` 组件只负责翻页阅读（图片展示 + 键盘翻页），不包含导航/退出/状态切换
+- 导航和状态切换由 `collections/[id]/page.tsx` 页面级 toolbar 统一管理
+- `BookViewer` 无 onBack、无 Esc 退出、无编辑按钮
+- 原因：BookViewer 曾在内部放返回按钮，导致与页面 toolbar 重复，产生双重导航 bug
+
 ---
 
 ## UI Philosophy
+
+### 核心原则
 
 - **风格参考**：Apple Photos（浏览）/ Eagle（管理）/ Linear（效率）
 - **色彩**：低饱和，灰度优先，黑白灰为主。数据可视化只用灰度，禁止彩色 chart
@@ -40,6 +84,94 @@
 - **信息密度**：首页三层节奏（upload+stats → filter → waterfall），gap-10 间距
 - **Modal**：bg-black/92 沉浸式，照片直接浮在暗色背景上，无白色容器包裹
 - **禁止**：dashboard 风格、彩色 badge、过度 hover 动效、emoji 装饰
+
+### 语言约定
+
+- **用户可见 UI**：统一中文（删除、导入摄影集、发布、重新编辑、确认、取消）
+- **技术代码**：英文（handleDelete、collection_id、storage_mode、getScatterTransform）
+- **注释**：中文
+
+### 色彩语义
+
+| 元素 | 颜色 | 语义 |
+|------|------|------|
+| draft 状态标签 | `amber` | 温暖、素材阶段 |
+| ready 状态标签 | `blue` | 冷静、已就绪 |
+| published 状态标签 | `green` | 完成、已发布 |
+| 删除按钮 | `red` | 危险操作 |
+| 导入按钮 | `blue` | 有益操作 |
+| 进度条 0-20% | `red` | 刚开始 |
+| 进度条 80-100% | `green` | 接近完成 |
+
+### PhotoCard Visual Language
+
+瀑布流 PhotoCard 遵循"照片优先"原则，操作和信息不抢占照片注意力。
+
+**照片展示：**
+- **直角照片**：`rounded-none`，模拟相纸 / contact sheet / 摄影书页面感
+- **容器微圆角**：卡片容器保留 `rounded-xl`，作为照片的展示框
+
+**信息层级：**
+
+| 层级 | 元素 | 可见条件 |
+|------|------|----------|
+| 默认 | 照片本身 | 始终可见 |
+| hover | metadata overlay（相机 · 焦段 · 光圈） | 鼠标悬停，底部渐变浮现 |
+| hover | 操作图标（导入 + / 删除） | 鼠标悬停，右上角浮现 |
+| 始终 | 编辑控件（排序 / 封面） | 仅摄影集编辑模式显示 |
+
+**操作按钮：**
+- 默认隐藏：导入（+）和删除（垃圾桶图标）仅在 hover 时显示
+- 半透明背景：`bg-black/40` 圆形图标按钮，不抢照片注意力
+- hover 增强：`bg-black/60` 或 `bg-red-500`（删除）
+
+**hover 动画：** 仅允许三种效果：`opacity`（overlay 淡入）、`shadow`（shadow-sm → shadow-lg）、`translateY`（-0.5 上浮）。不使用 scale、bounce、spring。
+
+**间距：** PhotoGrid 列间距 `gap-8`，卡片底部间距 `mb-8`，照片之间呼吸感。
+
+**设计意图：** 目标气质：摄影 contact sheet / 艺术档案 / 摄影师工作台。不是：SaaS dashboard / 后台管理系统。
+
+### Homepage Layout Philosophy
+
+首页布局遵循"从动作到内容"的心流路径：
+
+```
+上传区 (动作入口)
+  ↓ gap-10
+StatsPanel (数据洞察)
+  ↓ gap-10
+FilterBar (筛选 + 排序)
+  ↓ gap-8
+PhotoGrid (瀑布流)
+```
+
+三层之间用 `gap-10` (40px) 留白隔开，形成清晰的视觉节奏。上传区是行内紧凑条而非大面积拖拽框 — 用户可能只会上传一次，之后主要浏览和筛选。
+
+**与摄影集的关系：** 首页不是"全部照片"，是"未组织的素材"。照片归入 Collection 后从首页消失（unarchived 查询 `collection_id IS NULL`）。
+
+### Modal Viewing Experience
+
+- 全屏遮罩 `bg-black/92`，照片直接浮在暗色背景
+- 左图右信息（desktop），上图下信息（mobile）
+- 键盘导航：← → 切换照片，Esc 关闭
+- 无白色容器包裹照片 — 让照片成为唯一视觉焦点
+
+### StatsPanel Visual Philosophy
+
+- 6 维度横向滚动卡片（相机、镜头、焦距、ISO、光圈、快门）
+- 纯灰度配色：`bg-gray-100` 背景，`bg-gray-800` 高亮条
+- 每维度 Top 5，其余聚合为"其他 N 项"
+- 进度条宽度用百分比，不是像素 — 保证跨维度可比
+
+### Activity Heatmap System
+
+GitHub contribution 风格每日拍摄日历。核心设计决策：
+
+- **不是统计图表，是摄影节奏可视化** — 让摄影师看到自己的拍摄节奏和"空白期"
+- **灰度单色**：`bg-gray-100` (0张) → `bg-gray-300` → `bg-gray-500` → `bg-gray-700` → `bg-gray-900` (4+张)
+- **数据源**：`getAllPhotoDates()` — `COALESCE(date_taken, created_at)` 确保无 EXIF 照片也参与统计
+- **实现**：服务端 API `/api/stats?type=heatmap` → 客户端 53 列 × 7 行 grid
+- **空值处理**：无照片日期显示为 `bg-gray-50`，与 0 张的 `bg-gray-100` 区分
 
 ---
 
@@ -54,32 +186,207 @@ draft → ready → published
 | 状态 | 含义 | 可用操作 |
 |------|------|---------|
 | `draft` | 堆叠照片，未整理 | 排序、删图、设封面、→ ready |
-| `ready` | 已整理，可设置比例 | 设置 bookmark_ratio、→ published / → draft |
+| `ready` | 已整理，可设置比例 | 设置 book_ratio、→ published / → draft |
 | `published` | 全屏阅读模式 (BookViewer) | 导出 PDF、→ ready / → draft |
 
-- published 下照片不出现在首页瀑布流（unarchived 查询 `collection_id IS NULL`）
+### 状态语义
+
+| 状态 | 语义 | UI 模式 |
+|------|------|---------|
+| `draft` | 素材散落阶段，仍在选片整理 | 编辑模式（PhotoGrid + PhotoModal） |
+| `ready` | 整理完成，等待发布 | 编辑模式（PhotoGrid + PhotoModal） |
+| `published` | 已出版冻结，只读展示 | 阅读模式（BookViewer 全屏） |
+
+### 首页未归档原则
+
+- 首页只显示 `collection_id IS NULL` 的照片
+- `GET /api/photos?unarchived=1` 对应 `getUnarchivedPhotos()`
+- 照片一旦归入 Collection，立即从首页消失
+
+### Published 冻结原则
+
+- 已锁定：禁止导入新照片（API 层 400 + UI 层过滤下拉框）
+- 待锁定（后续版本）：删除照片、修改排序、编辑备注
+- 解锁方式：published → ready → 修改 → 重新发布
+- 双重校验：UI 层过滤（`?editable=1`）+ API 层验证（PATCH 前检查 targetCollection.status）
+
+### 版本系统
+
+- 初始值：创建时为 1
+- 递增时机：ready / draft → published 时自动 +1
+- 不递增：published → ready / draft 回退时保持不变
+- 含义："发布了多少次"，而非内容快照版本
+
+### Draft Visual Style
+
+draft 摄影集使用"散落照片"视觉语言，表达仍在整理中的创作状态。
+
+- 基于 `photo.id` 的 Knuth 乘法哈希生成可复现伪随机偏移
+- 每张预览照片有独立锚点（top: 2%~18%, left: 2%~18%）+ rotate（±11°）
+- 图片缩至 78%，留出散落空间
+- 同一摄影集每次渲染结果完全一致
+
+| 状态 | 预览风格 | 语义 |
+|------|----------|------|
+| draft | 不同锚点 + 独立旋转 + 重叠 | 仍在整理，素材散落在桌面上 |
+| ready | 规整 6px 递进偏移堆叠 | 已整理完毕，等待发布 |
+| published | 单张封面图 | 已出版，正式作品集 |
 
 ---
 
 ## PDF Export Rules
 
-- **摄影书不是网页**：固定页面尺寸 (420pt 基准)，不是 A4 文档，不是网页截图
+### 核心原则
+
+摄影书导出不是"把照片放进 PDF"，而是将数字档案转化为适合阅读的摄影出版物。
+
+- **摄影书，不是文档**：大留白、黑白灰、极简页码、宋体 caption
+- **比例跟随 Collection**：PDF 页面尺寸使用 Collection 的 book_ratio，不是固定 A4
+- **图片居中**：`object-contain`，白色背景，留白作为"书页"
+- **阅读体验优先**：420pt 页面（≈14.8cm）上的照片不需要 6000px 原图 — 人眼在阅读距离无法分辨差异
+
+### Export Architecture
+
+```
+Collection + Photos
+       ↓
+buildBookDocument()          ← schema.ts
+       ↓
+BookDocument (中间结构)
+       ↓
+resolveBookImages()          ← schema.ts (加载图片 base64 + sharp 优化)
+       ↓
+PhotoBook (react-pdf)        ← pdf.tsx (renderer)
+       ↓
+renderToBuffer() → PDF
+```
+
+- **schema.ts**：Collection → BookDocument（数据转换，与输出格式无关）
+- **layout.ts**：页面尺寸、边距、排版常量（所有 renderer 共用）
+- **pdf.tsx**：PDF renderer（只是 BookDocument 的一个渲染目标）
+- **types.ts**：BookDocument / Page 类型定义
+
+未来扩展（IDML / EPUB / Web Book）只需新增 renderer，复用 `buildBookDocument()` 和 `layout.ts`。
+
+### 页面类型
+
+| 类型 | 说明 | 用途 |
+|------|------|------|
+| `cover` | 封面（全幅照片或标题文字） | 第一页 |
+| `full-bleed` | 照片铺满页面 | 关键作品跨页 |
+| `image-with-caption` | 照片 + 下方 caption | 标准照片页 |
+| `spread` | 跨页照片 | 横幅作品（待实现） |
+
+### PDF 布局规则
+
 - **caption 不可跨页**：contentColumn → imageArea(flex:1) + captionArea(height:48px)
 - **Image 约束**：`maxWidth/maxHeight` 而非 `width/height` — react-pdf 同时设两个维度会拉伸图片破坏 objectFit
 - **留白来自 objectFit**：`objectFit: contain` 自动为 portrait/landscape 创建不同留白，不要手动方向检测
-- **字体**：Songti SC (宋体-简) Regular，react-pdf 自动 subset（只嵌入使用的 glyph）
-- **图片优化**：导出前 sharp resize(max 3000px) + JPEG(quality 0.85)，lib/export/image.ts
+- **页码不参与布局流**：`position: absolute` 固定在页面底部 18pt 处
+
+**最终稳定布局：**
+
+```
+Page
+├── contentColumn (flex:1, column)
+│   ├── imageArea (flex:1, overflow:hidden)
+│   │   └── Image (maxWidth:100% maxHeight:100% objectFit:contain)
+│   └── captionArea (height:48px)
+└── pageNumber (position:absolute, bottom:18)
+```
+
+### PDF Font System
+
+react-pdf 内置字体（Helvetica、Times-Roman、Times-Italic）不支持中文字符，需要注册 CJK 字体。
+
+**字体选择：Songti SC（宋体-简）**
+- 来源：macOS 系统字体 `/System/Library/Fonts/Supplemental/Songti.ttc`
+- 提取：使用 fontTools 从 TrueType Collection 中提取 Regular 字重为独立 `.ttf`
+- 存放位置：`public/fonts/SongtiSC-Regular.ttf`（~20MB）
+- 注册方式：`Font.register({ family: "SongtiSC", src: "public/fonts/SongtiSC-Regular.ttf" })`
+- 注册位置：`lib/export/pdf.tsx` 模块顶层（react-pdf 要求在组件渲染前完成注册）
+
+**为什么是宋体：** 衬线体（serif）与摄影书的艺术气质一致。传统中文排版中正文和标题默认使用宋体。与 Helvetica 无衬线英文标题形成内在对比。
+
+**字体子集化：** react-pdf 底层 PDFKit 自动执行 `font.createSubset()` → `subset.includeGlyph()` → `subset.encode()`。仅嵌入 PDF 中实际使用的 glyph，而非完整 20MB 字体文件。这是引擎级别自动行为，无需额外配置。
+
+### Export Typography
+
+- **封面**：18pt 宋体标题、深灰 `#333`、+1 字母间距，极简。标题即封面
+- **Caption**：9pt 宋体、中灰 `#666`、居中对齐、无斜体。中文不用斜体（传统中文排版不使用 italic）
+- **页码**：7pt 宋体、浅灰 `#999`、页面底部居中。封面不显示页码
+- **留白哲学**：照片页 36pt 上/左/右留白 + 56pt 下留白。留白是摄影书的一部分，不是浪费
+- **黑色文字，白色页面**：无彩色、无渐变、无装饰元素。让设计隐退
+
+### Export Image Pipeline
+
+```
+原始照片（6000×4000, ~8MB JPEG）
+    ↓
+optimizeExportImage()                         ← lib/export/image.ts
+    ↓ sharp.resize(3000, 3000, fit: "inside")
+    ↓ sharp.jpeg({ quality: 85 })
+    ↓
+导出图片（3000×2000, ~300KB JPEG）
+    ↓
+base64 data URL → BookDocument Page → PDF embed
+```
+
+- 最长边限制 3000px，JPEG quality 0.85（视觉无损，文件减小 60-80%）
+- 不上传时限制尺寸 — 上传照片用于全屏查看（PhotoModal）需要原始分辨率
+- `lib/export/image.ts` 是所有 renderer 共用的导出图片处理入口
+- JPEG quality 0.85 在印刷/屏幕显示中视觉无损
+
+### PDF Page Layout Bug 教训（三次迭代）
+
+**Bug #1 — caption 跨页：** `Image` 使用 `height: "100%"` + imageContainer `flex: 1` → 图片占满整个 Page，caption 无布局空间。
+修复：显式划分 `contentColumn` → `imageArea` (flex: 1) + `captionArea` (height: 48px)
+
+**Bug #2 — width/height 100% 拉伸 + 页码覆盖（修复 Bug #1 引入）：** `Image` 同时设置 `width: "100%"` 和 `height: "100%"` 强制匹配父容器宽高比，`objectFit: "contain"` 失效，图片拉伸变形。
+修复：改用 `maxWidth: "100%" maxHeight: "100%" objectFit: "contain"`
+
+**Bug #3 — JPEG SOF 字节扫描误判方向：** `getImageOrientation()` 逐字节扫描 SOF marker，但嵌入 EXIF 缩略图（如 160×120）先于主图被命中，导致方向误判。
+修复：移除 `getImageOrientation()`，信任 `objectFit: "contain"` 自动适配
+
+**关键教训：**
+- react-pdf Image 不要同时设 `width` 和 `height` 为 100%
+- `objectFit` 在 max 约束下正确，在显式 width+height 下失效
+- JPEG 字节扫描不可靠（缩略图干扰），不要在 renderer 中检测图片方向
+- `objectFit: "contain"` 天然适配 portrait/landscape 混合排版
+- react-pdf 分页系统真实分页 — 超出 Page 固定高度内容真的被推到下一页
+
+### PDF 与 Web 布局差异
+
+| 概念 | Web (CSS) | PDF (react-pdf) |
+|------|-----------|-----------------|
+| 页面 | 无限滚动 | 固定尺寸 Page |
+| 溢出 | scroll / hidden | 自动分页到下一页 |
+| flex 高度解析 | 视口高度 | Page 固定高度 |
+| 位置 | 相对视口 | 相对当前 Page |
+| Image sizing | width/height 100% + objectFit 正常 | 应使用 maxWidth/maxHeight + objectFit |
+
+**新增页面类型时的检查清单：**
+- [ ] 所有内容在 Page 固定高度内吗？
+- [ ] caption 和 photo 在同一页吗？
+- [ ] Image 使用的是 `maxWidth`/`maxHeight` 而非 `width`/`height` 吗？
+- [ ] 没有 JPEG 字节解析或图片方向检测逻辑吗？
+- [ ] 固定高度元素（caption、页码）在 flex 容器外吗？
 
 ---
 
 ## Known UI Bugs & Lessons
 
-1. **overflow-hidden 裁切直角照片**：父容器 `rounded-xl overflow-hidden` 会裁切 img 的直角。解决方案：移除 overflow-hidden
-2. **aspect-ratio + max-height 百分比失效**：CSS aspect-ratio 不产生显式 height，子元素 `max-height:100%` 无法解析百分比。解决方案：absolute inset-0 定位
-3. **react-pdf Image width+height 100% 拉伸**：显式 width+height 强制 Image 匹配父容器宽高比，objectFit 失效。解决方案：maxWidth/maxHeight
-4. **JPEG SOF 字节扫描方向检测不可靠**：嵌入 EXIF 缩略图先于主图 SOF 被扫描命中。解决方案：不要字节解析，信任 objectFit
-5. **react-pdf 分页系统真实分页**：超出 Page 固定高度的内容真的被推到下一页。解决方案：先划分区域再填充
-6. **月度柱状图空值**：CSS `height:2%` 在 flex child 中解析为 0px。解决方案：JS 计算像素高度
+1. **overflow-hidden 裁切直角照片**：父容器 `rounded-xl overflow-hidden` 会裁切 img 的直角。解决方案：移除 overflow-hidden。PhotoCard 照片 `rounded-none` + 容器 `rounded-xl`。
+
+2. **aspect-ratio + max-height 百分比失效**：CSS `aspect-ratio` 不产生显式 height，子元素 `max-height:100%` 无法解析百分比。解决方案：absolute inset-0 定位。具体：BookViewer 中 img 从 `max-w-full max-h-full object-contain` 改为 `absolute inset-0 w-full h-full object-contain`。
+
+3. **react-pdf Image width+height 100% 拉伸**：显式 width+height 强制 Image 匹配父容器宽高比，objectFit 失效。解决方案：maxWidth/maxHeight。
+
+4. **JPEG SOF 字节扫描方向检测不可靠**：嵌入 EXIF 缩略图先于主图 SOF 被扫描命中。解决方案：不要字节解析，信任 objectFit。
+
+5. **react-pdf 分页系统真实分页**：超出 Page 固定高度的内容真的被推到下一页。解决方案：先划分区域再填充。
+
+6. **月度柱状图空值**：CSS `height:2%` 在 flex child 中解析为 0px。解决方案：JS 计算像素高度（Activity Heatmap）。
 
 ---
 
@@ -112,6 +419,7 @@ draft → ready → published
 - lib/export/image.ts — sharp 导出图优化（max 3000px + JPEG 0.85）
 - Export Metrics — PDF 导出时 console 输出页数/图片/体积/优化率
 - CLAUDE.md — AI Agent 长期记忆文件
+- 三层文档系统 — README (人类) / CLAUDE.md (AI) / memory/ (持久化偏好)
 
 #### Bug Fix
 - BookViewer portrait 照片溢出 — absolute inset-0 + object-contain
@@ -122,6 +430,7 @@ draft → ready → published
 #### Architecture
 - resolveBookImages() 同步 → 异步（集成 sharp 优化）
 - Export Pipeline 增加图片优化层
+- README 大规模清理 — 迁移 ~500 行 dev/AI 内容到 CLAUDE.md
 
 ### 2026-05-26
 
