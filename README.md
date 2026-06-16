@@ -5,7 +5,16 @@
 > 面向人类开发者的项目文档。AI Agent 开发规则请参阅 [CLAUDE.md](CLAUDE.md)。
 
 ---
+## 预览
 
+> UI 后续会持续打磨，让它更好看，瀑布流在下面就不放了。
+
+首页导入区与 GitHub 风格拍摄热力图
+
+![首页导入区与 GitHub 风格拍摄热力图](image.png)
+摄影语言分布 — 等效焦段 6 分类柱状图
+
+![摄影语言分布 — 等效焦段 6 分类柱状图](image-1.png)
 ## 技术栈
 
 - **前端**：Next.js 15 (App Router) + TypeScript + Tailwind CSS 4

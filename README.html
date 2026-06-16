@@ -1,0 +1,973 @@
+<!DOCTYPE html><html><head>
+      <title>README</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:////Users/astrohhq/.vscode/extensions/shd101wyy.markdown-preview-enhanced-0.8.27/crossnote/dependencies/katex/katex.min.css">
+      
+      
+      
+      
+      
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-details{margin:0;padding:0;border:none}.markdown-preview .md-toc summary.md-toc-link-wrapper{cursor:pointer;list-style-position:outside}.markdown-preview .md-toc summary.md-toc-link-wrapper::marker{font-size:.85em}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='0']{margin-left:12px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='1']{margin-left:28px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='2']{margin-left:44px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='3']{margin-left:60px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='4']{margin-left:76px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='5']{margin-left:80px}.markdown-preview a.tag,.markdown-preview a.tag:active,.markdown-preview a.tag:link,.markdown-preview a.tag:visited,.markdown-preview span.tag:not(.token){display:inline-block;background-color:var(--vscode-badge-background,rgba(127,127,127,.18));color:var(--vscode-badge-foreground,currentColor);border-radius:2em;font-size:.85em;font-weight:500;padding:.05em .55em;line-height:1.5;white-space:nowrap;text-decoration:none;text-shadow:none;box-shadow:none;transition:background-color .12s ease,opacity .12s ease}.markdown-preview a.tag{cursor:pointer}.markdown-preview a.tag:focus,.markdown-preview a.tag:hover{background-color:var(--vscode-badge-background,rgba(127,127,127,.32));color:var(--vscode-badge-foreground,currentColor);opacity:.85;text-decoration:none;outline:0}.markdown-preview .wikilink-embed-content{border-left:3px solid var(--vscode-textBlockQuote-border,rgba(128,128,128,.3));background:var(--vscode-textBlockQuote-background,rgba(128,128,128,.05));margin:.5em 0;padding:.5em .75em;border-radius:0 3px 3px 0}.markdown-preview .wikilink-embed-content.wikilink-embed-error{border-left-color:var(--vscode-errorForeground,#cf222e);color:var(--vscode-errorForeground,#cf222e);font-style:italic;opacity:.8}.markdown-preview .wikilink-embed-content h1:first-child,.markdown-preview .wikilink-embed-content h2:first-child,.markdown-preview .wikilink-embed-content h3:first-child,.markdown-preview .wikilink-embed-content h4:first-child,.markdown-preview .wikilink-embed-content h5:first-child,.markdown-preview .wikilink-embed-content h6:first-child{margin-top:.25em}.markdown-preview .wikilink-embed-content .wikilink-embed-content{margin:.25em 0;padding:.25em .5em}.markdown-preview .block-id{display:none}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-details{margin:0;padding:0;border:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='0']{padding-left:0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='1']{padding-left:16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='2']{padding-left:32px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='3']{padding-left:48px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='4']{padding-left:64px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='5']{padding-left:80px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script>
+    </head>
+    <body for="html-export">
+      <div class="crossnote markdown-preview  ">
+      
+<h1 id="photo-manager-mvp">Photo Manager MVP </h1>
+<p>本地摄影照片管理工具 — 上传、EXIF 解析、瀑布流浏览、摄影集管理、摄影书 PDF 导出。</p>
+<blockquote>
+<p>面向人类开发者的项目文档。AI Agent 开发规则请参阅 <a href="CLAUDE.md">CLAUDE.md</a>。</p>
+</blockquote>
+<hr>
+<h2 id="技术栈">技术栈 </h2>
+<ul>
+<li><strong>前端</strong>：Next.js 15 (App Router) + TypeScript + Tailwind CSS 4</li>
+<li><strong>数据库</strong>：SQLite（better-sqlite3，同步 API，WAL 模式）</li>
+<li><strong>EXIF 解析</strong>：ExifReader（纯 JS，无需系统依赖）</li>
+<li><strong>语音输入</strong>：Web Speech API（浏览器原生语音识别）</li>
+</ul>
+<h2 id="项目结构">项目结构 </h2>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>photo-exif-classifier/
+├── app/                                  # Next.js App Router
+│   ├── layout.tsx                        # 根布局 — 顶部导航栏 + 内容区
+│   ├── page.tsx                          # 首页 — 上传区 + 照片管理容器
+│   ├── globals.css                       # 全局样式（Tailwind）
+│   └── api/
+│       ├── upload/route.ts               # POST — 上传照片、读 EXIF、写入 DB
+│       ├── photos/route.ts               # GET  — 获取所有照片列表
+│       ├── photos/[id]/route.ts          # PATCH / DELETE — 更新照片字段 / 删除照片
+│       ├── photos/[id]/file/route.ts     # GET  — 返回照片原始文件
+│       ├── photos/[id]/note/route.ts     # PATCH — 更新照片备注
+│       └── stats/route.ts                # GET  — EXIF 参数统计聚合
+│       ├── collections/route.ts          # GET/POST — 摄影集列表 &amp; 创建
+│       ├── collections/[id]/route.ts     # GET/PATCH — 摄影集详情 &amp; 更新
+│       └── collections/[id]/export/
+│           └── route.tsx                 # GET — 导出摄影书 PDF
+├── collections/
+│   └── page.tsx                          # 摄影集列表页面（/collections）
+├── components/                           # React 组件
+│   ├── UploadZone.tsx                    # 拖拽上传组件（拖拽 + 点击，支持多文件 + 上传目标选择）
+│   ├── PhotoContainer.tsx                # 照片管理容器（状态管理、筛选、弹窗控制）
+│   ├── PhotoGrid.tsx                     # 瀑布流布局（CSS columns 响应式）
+│   ├── PhotoCard.tsx                     # 单张照片卡片（缩略图 + EXIF 摘要 + 备注预览）
+│   ├── PhotoModal.tsx                    # 照片详情弹窗（大图 + EXIF + 备注编辑 + 语音输入）
+│   ├── CollectionCard.tsx                # 摄影集卡片（draft 散落 / ready 堆叠 / published 封面）
+│   ├── BookViewer.tsx                    # 摄影集阅读模式（全屏单页翻页 + fade/slide 动画）
+│   ├── StatsPanel.tsx                    # EXIF 统计面板（6 维度横向滚动卡片，Top 5）
+│   └── FilterBar.tsx                     # 筛选栏（相机 / 镜头 + 时间排序 pill）
+├── lib/                                  # 服务端工具库
+│   ├── db.ts                             # SQLite 数据库（建表、增删改查、备注更新、摄影集操作）
+│   ├── exif.ts                           # ExifReader 封装（提取 7 个拍摄参数）
+│   ├── file.ts                           # 文件访问抽象层（copied / referenced 模式）
+│   ├── stats.ts                          # 统计聚合（6 维度分组计数 + 筛选逻辑）
+│   └── export/                           # 摄影书导出管道
+│       ├── types.ts                      # BookDocument / Page 核心类型
+│       ├── schema.ts                     # buildBookDocument() 构建中间结构
+│       ├── layout.ts                     # 页面尺寸、边距、排版常量
+│       └── pdf.tsx                       # PDF renderer（@react-pdf/renderer）
+├── uploads/                              # 上传照片存储目录（UUID 命名）
+├── photos.db                             # SQLite 数据库文件
+├── package.json
+├── tsconfig.json
+├── next.config.ts
+└── postcss.config.mjs
+</code></pre><hr>
+<h2 id="architecture-principles">Architecture Principles </h2>
+<h3 id="collection-三态语义">Collection 三态语义 </h3>
+<p>Collection 有三个状态，不是线性流水线，而是语义不同的三种模式：</p>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th>语义</th>
+<th>允许的操作</th>
+<th>UI 模式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>draft</code></td>
+<td>素材散落阶段，仍在选片整理</td>
+<td>增删照片、排序、备注、设封面</td>
+<td>编辑模式（PhotoGrid + PhotoModal）</td>
+</tr>
+<tr>
+<td><code>ready</code></td>
+<td>整理完成，等待发布</td>
+<td>增删照片、排序、备注、设封面</td>
+<td>编辑模式（PhotoGrid + PhotoModal）</td>
+</tr>
+<tr>
+<td><code>published</code></td>
+<td>已出版冻结，只读展示</td>
+<td>仅翻页阅读</td>
+<td>阅读模式（BookViewer 全屏）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>状态流转方向：</strong></p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>draft ←→ ready ←→ published
+         ↑        ↓
+         └────────┘
+</code></pre><ul>
+<li><code>draft → ready</code>：标记整理完成</li>
+<li><code>ready → published</code>：发布，version +1</li>
+<li><code>published → ready</code>：重新编辑（解锁修改）</li>
+<li><code>published → draft</code>：取消发布（完全回退）</li>
+</ul>
+<h3 id="首页未归档原则">首页未归档原则 </h3>
+<ul>
+<li>首页只显示 <code>collection_id IS NULL</code> 的照片</li>
+<li><code>GET /api/photos?unarchived=1</code> 对应 <code>getUnarchivedPhotos()</code></li>
+<li>照片一旦归入 Collection，立即从首页消失</li>
+<li>首页不是"全部照片"，而是"未组织的素材"</li>
+</ul>
+<h3 id="published-冻结原则">Published 冻结原则 </h3>
+<p>published 摄影集视为已出版内容，不可修改：</p>
+<ul>
+<li><strong>已锁定</strong>：禁止导入新照片（API 层 400 + UI 层过滤下拉框）</li>
+<li><strong>待锁定</strong>（后续版本）：删除照片、修改排序、编辑备注</li>
+<li><strong>解锁方式</strong>：published → ready → 修改 → 重新发布</li>
+<li>双重校验：UI 层过滤（<code>?editable=1</code>）+ API 层验证（PATCH 前检查 targetCollection.status）</li>
+</ul>
+<h3 id="bookviewer-与页面状态职责分离">BookViewer 与页面状态职责分离 </h3>
+<ul>
+<li><code>BookViewer</code> 组件只负责翻页阅读（图片展示 + 键盘翻页），不包含导航/退出/状态切换</li>
+<li>导航和状态切换由 <code>collections/[id]/page.tsx</code> 页面级 toolbar 统一管理</li>
+<li><code>BookViewer</code> 无 onBack、无 Esc 退出、无编辑按钮</li>
+<li>原因：BookViewer 曾在内部放返回按钮，导致与页面 toolbar 重复，产生双重导航 bug</li>
+</ul>
+<h3 id="z-index-分层规则">z-index 分层规则 </h3>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>z-index</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>普通内容</td>
+<td>默认</td>
+<td>页面主体、卡片</td>
+</tr>
+<tr>
+<td>导航栏</td>
+<td><code>z-50</code></td>
+<td>layout.tsx sticky header</td>
+</tr>
+<tr>
+<td>全屏容器</td>
+<td><code>z-[60]</code></td>
+<td>published 阅读模式、全屏弹窗</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>规则</strong>：全屏容器必须高于导航栏（60 &gt; 50），否则 toolbar 按钮被导航栏遮挡。</p>
+</blockquote>
+<h3 id="storage_mode-架构意义">storage_mode 架构意义 </h3>
+<ul>
+<li><code>copied</code>：当前 Web MVP 模式，上传时复制文件到 <code>uploads/</code></li>
+<li><code>referenced</code>：未来 Electron/mac App 模式，数据库只存路径，不复制文件</li>
+<li><code>lib/file.ts</code> 提供 <code>getPhotoUrl(photo)</code> 抽象层，UI 层不直接拼接文件 URL</li>
+<li>未来切换模式只需改 <code>getPhotoUrl</code> 实现，UI 层零改动</li>
+</ul>
+<hr>
+<h2 id="visual-language">Visual Language </h2>
+<p>UI 设计遵循"语义驱动视觉"原则。不同状态用不同视觉语言传达创作阶段。</p>
+<h3 id="draft散落--contact-sheet">draft：散落 / Contact Sheet </h3>
+<ul>
+<li><strong>隐喻</strong>：摄影师桌面上散落的照片素材</li>
+<li><strong>实现</strong>：每张预览照片独立锚点（top/left 基于 <a href="http://photo.id">photo.id</a> Knuth 哈希），rotate ±11°</li>
+<li><strong>关键</strong>：不同锚点位置是散落感的来源，rotate 只起辅助作用</li>
+<li><strong>图片尺寸</strong>：78%（留 22% 空间给散落偏移）</li>
+<li><strong>底板</strong>：淡灰半透明矩形暗示"桌面"</li>
+</ul>
+<h3 id="ready规整--待出版">ready：规整 / 待出版 </h3>
+<ul>
+<li><strong>隐喻</strong>：已整理好的照片叠，等待最终确认</li>
+<li><strong>实现</strong>：规整 6px 递进偏移堆叠，无旋转</li>
+<li><strong>图片尺寸</strong>：100%（填充容器）</li>
+</ul>
+<h3 id="published封面--作品集">published：封面 / 作品集 </h3>
+<ul>
+<li><strong>隐喻</strong>：一本已出版摄影书的封面</li>
+<li><strong>实现</strong>：单张封面图（优先 cover_photo_id），<code>aspect-[4/3]</code></li>
+<li><strong>进入后</strong>：全屏 BookViewer 阅读模式，留白、干净、无编辑控件</li>
+</ul>
+<h3 id="色彩语义">色彩语义 </h3>
+<table>
+<thead>
+<tr>
+<th>元素</th>
+<th>颜色</th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>draft 状态标签</td>
+<td><code>amber</code></td>
+<td>温暖、素材阶段</td>
+</tr>
+<tr>
+<td>ready 状态标签</td>
+<td><code>blue</code></td>
+<td>冷静、已就绪</td>
+</tr>
+<tr>
+<td>published 状态标签</td>
+<td><code>green</code></td>
+<td>完成、已发布</td>
+</tr>
+<tr>
+<td>删除按钮</td>
+<td><code>red</code></td>
+<td>危险操作</td>
+</tr>
+<tr>
+<td>导入按钮</td>
+<td><code>blue</code></td>
+<td>有益操作</td>
+</tr>
+<tr>
+<td>进度条 0-20%</td>
+<td><code>red</code></td>
+<td>刚开始</td>
+</tr>
+<tr>
+<td>进度条 80-100%</td>
+<td><code>green</code></td>
+<td>接近完成</td>
+</tr>
+</tbody>
+</table>
+<h3 id="语言约定">语言约定 </h3>
+<ul>
+<li><strong>用户可见 UI</strong>：统一中文（删除、导入摄影集、发布、重新编辑、确认、取消）</li>
+<li><strong>技术代码</strong>：英文（handleDelete、collection_id、storage_mode、getScatterTransform）</li>
+<li><strong>注释</strong>：中文</li>
+<li><strong>README</strong>：中文</li>
+</ul>
+<hr>
+<h2 id="功能列表">功能列表 </h2>
+<ul>
+<li><strong>拖拽 / 点击上传</strong>：支持拖拽多张 JPG/PNG 照片到上传区，也支持点击选择文件批量上传，显示上传进度和 EXIF 摘要</li>
+<li><strong>自动读取 EXIF</strong>：上传时自动提取相机型号、镜头型号、焦距、ISO、光圈、快门速度、拍摄时间 7 个字段</li>
+<li><strong>照片瀑布流</strong>：CSS columns 实现响应式瀑布流布局（移动端 1 列 → sm 2 列 → lg 3 列 → xl 4 列）</li>
+<li><strong>EXIF 统计面板</strong>：6 个维度（相机、镜头、焦距、ISO、光圈、快门）的 Top 5 分布统计，以横向滚动卡片展示</li>
+<li><strong>筛选栏</strong>：4 个下拉选择器（相机 / 镜头 / 光圈 / ISO），选中即时生效，支持一键清除所有筛选</li>
+<li><strong>照片详情弹窗</strong>：点击照片打开全屏遮罩弹窗，左图右 EXIF，键盘 ← → 切换前后照片，Esc 关闭</li>
+<li><strong>备注功能</strong>：支持手动输入备注，以及按住空格键（或麦克风按钮）触发浏览器语音识别，松开自动填入文字</li>
+<li><strong>备注预览</strong>：照片卡片底部显示备注缩略文字，方便快速浏览</li>
+<li><strong>摄影集管理</strong>：支持创建摄影集，将照片归入摄影集。draft（待整理）、ready（可发布）、published（已发布）三种状态流转，编辑进度追踪</li>
+<li><strong>摄影集封面</strong>：可在摄影集详情页手动选择任意照片作为封面，published 状态优先展示封面</li>
+<li><strong>Published Book View</strong>：published 摄影集进入全屏单页翻页阅读模式，按 sort_order 顺序浏览，支持键盘 ← → 和按钮翻页，带淡入滑动动画</li>
+<li><strong>上传目标选择</strong>：上传时可选择上传到首页（未归档）、新建摄影集或已有摄影集，灵活组织照片归属</li>
+<li><strong>照片导入摄影集</strong>：首页未归档照片可随时导入已有摄影集，一键归档，非复制文件，自动追加排序和封面</li>
+</ul>
+<h2 id="数据流">数据流 </h2>
+<h3 id="1-上传流程">1. 上传流程 </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>UploadZone（可选：选择上传目标 → 首页 / 新建摄影集 / 已有摄影集）
+  → POST /api/upload（附带 collectionId 或 newCollectionTitle）
+  → 保存文件到 uploads/（UUID 命名）
+  → ExifReader 读取 EXIF
+  → 如果 newCollectionTitle 存在：先创建 Collection
+  → insertPhoto() 写入 SQLite（含 collection_id）
+  → 返回上传结果及 EXIF 摘要
+</code></pre><h3 id="2-展示流程">2. 展示流程 </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>PhotoContainer → GET /api/photos?unarchived=1
+  → getUnarchivedPhotos() 从 SQLite 查询（collection_id IS NULL）
+  → PhotoGrid 渲染瀑布流
+  → PhotoCard 通过 getPhotoUrl() 加载缩略图
+</code></pre><h3 id="3-统计流程">3. 统计流程 </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>StatsPanel → GET /api/stats
+  → getStats() 从 SQLite 读取全量数据
+  → 纯 JS reduce 内存聚合（6 维度分组计数）
+  → 返回 Top 5 分布数据
+</code></pre><h3 id="4-备注流程">4. 备注流程 </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>PhotoModal（用户编辑备注）
+  → PATCH /api/photos/[id]/note
+  → updatePhotoNote() 更新 SQLite
+  → 乐观更新本地 UI 状态
+</code></pre><h3 id="5-图片文件">5. 图片文件 </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>GET /api/photos/[id]/file
+  → getPhotoById() 查数据库获取 filename
+  → 从 uploads/ 读取文件返回（带 Cache-Control 缓存 1 天）
+</code></pre><h3 id="6-摄影集">6. 摄影集 </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>/collections 页面 → GET /api/collections
+  → getAllCollections() + getCollectionPhotos() 预览（含进度统计）
+  → CollectionCard 渲染（draft 散落 / ready 堆叠 / published 封面）
+
+/collections/[id] 详情页（draft / ready）→ GET /api/collections/[id]
+  → PhotoGrid 瀑布流 + 排序 / 备注 / 设为封面
+  → 状态流转：draft → ready → published
+
+/collections/[id] 详情页（published）→ BookViewer 阅读模式
+  → 全屏单页翻页，按 sort_order 顺序浏览
+  → 键盘 ← → / 按钮翻页
+  → 淡入 + 微滑动入场动画
+  → toolbar 由 page.tsx 管理，BookViewer 只负责翻页
+
+上传到摄影集 → POST /api/upload + collectionId/newCollectionTitle
+  → 照片带上 collection_id，不出现在首页瀑布流
+
+设置封面 → PATCH /api/collections/[id] { cover_photo_id }
+  → PhotoCard "设为封面"按钮触发，乐观更新本地状态
+</code></pre><h2 id="published-book-view">Published Book View </h2>
+<p>published 摄影集提供全屏阅读模式（BookViewer），将摄影集变为摄影书 / 作品集。</p>
+<ul>
+<li><strong>入口</strong>：从 <code>/collections</code> 点击 published 摄影集卡片</li>
+<li><strong>阅读顺序</strong>：按 <code>sort_order</code> 升序排列（未排序照片靠后，按 id 升序）</li>
+<li><strong>翻页</strong>：左右箭头按钮、键盘 ← → 方向键</li>
+<li><strong>退出</strong>：页面顶部 toolbar 的"← 返回摄影集列表"链接、重新编辑 / 取消发布按钮</li>
+<li><strong>动画</strong>：淡入 + 微向下滑动（0.3s ease-out）</li>
+<li><strong>隐藏</strong>：编辑按钮、排序按钮、封面按钮、进度条 — 纯阅读体验</li>
+<li><strong>备注展示</strong>：照片备注以斜体居中显示在照片下方</li>
+<li><strong>版本显示</strong>：顶栏标题旁显示版本号（v1, v2, …）</li>
+</ul>
+<h3 id="导航方式">导航方式 </h3>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>下一页</td>
+<td>右侧圆形箭头按钮、键盘 →</td>
+</tr>
+<tr>
+<td>上一页</td>
+<td>左侧圆形箭头按钮、键盘 ←</td>
+</tr>
+<tr>
+<td>退出阅读</td>
+<td>页面 toolbar "← 返回摄影集列表"</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>注意</strong>：导航（返回 / 状态切换）由 <code>collections/[id]/page.tsx</code> 页面级 toolbar 统一管理。BookViewer 只负责翻页阅读，不包含自己的返回按钮或 Esc 退出逻辑。</p>
+</blockquote>
+<h3 id="与编辑模式对比">与编辑模式对比 </h3>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>状态</th>
+<th>组件</th>
+<th>可见功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>编辑模式</td>
+<td>draft / ready</td>
+<td>PhotoGrid + PhotoModal</td>
+<td>排序、备注、设封面、进度条、状态流转</td>
+</tr>
+<tr>
+<td>阅读模式</td>
+<td>published</td>
+<td>BookViewer</td>
+<td>翻页、查看备注、页码、版本号</td>
+</tr>
+</tbody>
+</table>
+<h2 id="version-system">Version System </h2>
+<p>摄影集用 <code>version</code> 字段记录发布次数。</p>
+<ul>
+<li><strong>初始值</strong>：创建时为 1</li>
+<li><strong>递增时机</strong>：ready / draft → published 时自动 +1</li>
+<li><strong>不递增</strong>：published → ready / draft 回退时保持不变</li>
+<li><strong>含义</strong>："发布了多少次"，而非内容快照版本</li>
+</ul>
+<h3 id="状态流转与版本">状态流转与版本 </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>draft → ready        版本不变
+ready → published    版本 +1
+published → ready    版本不变（"重新编辑"按钮）
+published → draft    版本不变（"取消发布"按钮）
+ready → published    版本 +1（再次发布）
+</code></pre><h3 id="ui-展示">UI 展示 </h3>
+<ul>
+<li><strong>CollectionCard</strong>：published 状态卡片上显示版本号徽章（如 <code>v3</code>）</li>
+<li><strong>BookViewer</strong>：顶部标题旁显示版本号</li>
+<li><strong>详情页</strong>：published 状态下提供"重新编辑"（→ ready）和"取消发布"（→ draft）两个回退按钮</li>
+</ul>
+<h2 id="storage-architecture">Storage Architecture </h2>
+<p>当前 Photo Manager 支持两种存储模式，为未来 Electron/mac App 做架构预留。</p>
+<h3 id="copied-模式当前-web-mvp"><code>copied</code> 模式（当前 Web MVP） </h3>
+<p>上传照片时复制到 <code>uploads/</code> 目录，以 UUID 重命名。照片通过 <code>/api/photos/[id]/file</code> API 路由访问。</p>
+<ul>
+<li><strong>优点</strong>：实现简单，适合 Web MVP</li>
+<li><strong>缺点</strong>：重复占用磁盘空间，RAW 文件体积大时尤其浪费</li>
+</ul>
+<h3 id="referenced-模式未来-electronmac-app"><code>referenced</code> 模式（未来 Electron/mac App） </h3>
+<p>不复制照片文件，数据库记录原始文件路径。未来通过 Electron 的 custom protocol 或 <code>file://</code> 直接读取。</p>
+<ul>
+<li><strong>优点</strong>：零额外磁盘占用，保留用户原始目录结构</li>
+<li><strong>缺点</strong>：需要本地运行环境（Electron）</li>
+</ul>
+<h3 id="文件访问抽象层-libfilets">文件访问抽象层 <code>lib/file.ts</code> </h3>
+<p>所有 UI 组件通过 <code>getPhotoUrl(photo)</code> 获取照片 URL，不直接拼接 <code>/api/photos/.../file</code>。未来切换到 <code>referenced</code> 模式时，只需修改 <code>getPhotoUrl</code> 的实现，UI 层无需改动。</p>
+<h3 id="关键字段">关键字段 </h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>photos.filename</code></td>
+<td><code>copied</code> 模式：uploads/ 下的 UUID 文件名；<code>referenced</code> 模式：原始文件绝对路径</td>
+</tr>
+<tr>
+<td><code>photos.storage_mode</code></td>
+<td><code>"copied"</code> 或 <code>"referenced"</code>，决定 <code>getPhotoUrl()</code> 行为</td>
+</tr>
+</tbody>
+</table>
+<h2 id="photo-deletion">Photo Deletion </h2>
+<p>照片删除通过 <code>DELETE /api/photos/[id]</code> 接口完成，支持首页未归档照片和摄影集内照片删除。</p>
+<h3 id="删除行为">删除行为 </h3>
+<table>
+<thead>
+<tr>
+<th>存储模式</th>
+<th>数据库</th>
+<th>文件系统</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>copied</code></td>
+<td>删除 <code>photos</code> 记录</td>
+<td>删除 <code>uploads/</code> 下的 UUID 文件</td>
+</tr>
+<tr>
+<td><code>referenced</code></td>
+<td>删除 <code>photos</code> 记录</td>
+<td>不删除原始文件</td>
+</tr>
+</tbody>
+</table>
+<h3 id="关联数据处理">关联数据处理 </h3>
+<ul>
+<li><strong>封面清理</strong>：如果被删除照片是某个摄影集的封面（<code>cover_photo_id</code>），自动置 NULL</li>
+<li><strong>排序重排</strong>：如果照片属于某摄影集且有 <code>sort_order</code>，删除后自动重整该摄影集内剩余照片的 <code>sort_order</code>（0, 1, 2, …）</li>
+</ul>
+<h3 id="ui-交互">UI 交互 </h3>
+<ul>
+<li>PhotoCard 底部显示红色"删除"文字按钮（仅编辑模式可见，published 阅读模式不显示）</li>
+<li>点击弹出原生 <code>window.confirm("确认删除这张照片？")</code></li>
+<li>确认后：DELETE API → 本地状态过滤移除（瀑布流立即刷新）</li>
+</ul>
+<h2 id="photo-archive">Photo Archive </h2>
+<p>首页未归档照片可导入已有摄影集。这不是复制照片，只是将 <code>photos.collection_id</code> 从未归档（NULL）更新为目标摄影集 ID。</p>
+<h3 id="数据流-1">数据流 </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>首页 PhotoCard "导入摄影集" 按钮
+  → 选择目标摄影集（内联 &lt;select&gt;）
+  → PATCH /api/photos/[id] { collection_id: xxx }
+  → updatePhotoCollectionId() 写入 DB
+  → 首页瀑布流即时移除该照片（已归档）
+</code></pre><h3 id="导入行为">导入行为 </h3>
+<ul>
+<li><strong>非复制</strong>：只更新 <code>collection_id</code>，不复制文件、不修改 <code>file_path</code>、不影响 <code>storage_mode</code></li>
+<li><strong>自动排序</strong>：新导入照片的 <code>sort_order</code> 设为当前摄影集内最大值 +1，追加到末尾</li>
+<li><strong>自动封面</strong>：若目标摄影集尚未设置封面，第一张导入的照片自动成为封面</li>
+</ul>
+<h3 id="ui-交互-1">UI 交互 </h3>
+<ul>
+<li>PhotoCard 底部显示蓝色"导入摄影集"文字按钮（仅未归档照片显示）</li>
+<li>点击后展开内联选择器：<code>&lt;select&gt;</code> 下拉选择摄影集 + "确认" / "取消"按钮</li>
+<li>确认后：PATCH API → 照片从首页瀑布流移除</li>
+</ul>
+<h2 id="published-lock-rules">Published Lock Rules </h2>
+<p>published 摄影集视为已出版／已冻结，禁止内容修改。</p>
+<h3 id="当前锁定的操作">当前锁定的操作 </h3>
+<ul>
+<li><strong>禁止导入照片</strong>：<code>PATCH /api/photos/[id] { collection_id }</code> 目标为 published 时返回 400 <code>"已发布摄影集无法修改，请先重新编辑"</code></li>
+<li><strong>UI 层面</strong>：首页"导入摄影集"下拉框不显示 published 摄影集（<code>GET /api/collections?editable=1</code> 过滤）</li>
+</ul>
+<h3 id="解锁方式">解锁方式 </h3>
+<p>如需修改 published 摄影集内容，必须先将其状态回退到 ready（"重新编辑"按钮），修改完成后再重新发布。</p>
+<h3 id="待锁定后续版本">待锁定（后续版本） </h3>
+<p>published 状态下尚未锁定的操作：删除照片、修改排序、编辑备注。这些操作后续版本将逐步锁定，统一遵循"先回退再修改"的规则。</p>
+<h2 id="draft-visual-style">Draft Visual Style </h2>
+<p>draft 摄影集使用"散落照片"视觉语言，表达仍在整理中的创作状态。</p>
+<h3 id="实现方式">实现方式 </h3>
+<ul>
+<li>基于 <code>photo.id</code> 的 Knuth 乘法哈希生成可复现伪随机偏移</li>
+<li>每张预览照片有独立锚点（top: 2%~18%, left: 2%~18%）+ rotate（±11°）</li>
+<li>图片缩至 78%，留出散落空间</li>
+<li>同一摄影集每次渲染结果完全一致，不受刷新影响</li>
+</ul>
+<h3 id="视觉对比">视觉对比 </h3>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th>预览风格</th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>draft</td>
+<td>不同锚点 + 独立旋转 + 重叠</td>
+<td>仍在整理，素材散落在桌面上</td>
+</tr>
+<tr>
+<td>ready</td>
+<td>规整 6px 递进偏移堆叠</td>
+<td>已整理完毕，等待发布</td>
+</tr>
+<tr>
+<td>published</td>
+<td>单张封面图</td>
+<td>已出版，正式作品集</td>
+</tr>
+</tbody>
+</table>
+<h2 id="book-ratio">Book Ratio </h2>
+<p>published 摄影集支持预设摄影书比例，让封面和阅读体验更像真实摄影书。</p>
+<h3 id="预设比例">预设比例 </h3>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>比例</th>
+<th>名称</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>4:5</code></td>
+<td>竖版</td>
+<td>Portrait</td>
+<td>默认，适合大多数人像/竖构图作品</td>
+</tr>
+<tr>
+<td><code>1:1</code></td>
+<td>方形</td>
+<td>Square</td>
+<td>方形构图，Instagram 风格</td>
+</tr>
+<tr>
+<td><code>3:2</code></td>
+<td>横版</td>
+<td>Landscape</td>
+<td>横幅风光作品</td>
+</tr>
+<tr>
+<td><code>2:3</code></td>
+<td>长竖版</td>
+<td>Tall Book</td>
+<td>高挑竖构图，时装/建筑</td>
+</tr>
+</tbody>
+</table>
+<h3 id="生效范围">生效范围 </h3>
+<ul>
+<li><strong>CollectionCard</strong>：published 封面按比例显示（<code>object-contain</code>，白色背景，不裁切）</li>
+<li><strong>BookViewer</strong>：照片容器按比例约束，图片 <code>object-contain</code> 适配，留白作为"书页"</li>
+<li><strong>默认值</strong>：<code>4:5</code>（新创建 + 旧数据迁移）</li>
+</ul>
+<h3 id="设置方式">设置方式 </h3>
+<ul>
+<li>ready 状态详情页显示比例选择器（4 个 pill 按钮）</li>
+<li>点击即时 PATCH 更新 <code>collections.book_ratio</code></li>
+<li>发布时无需额外操作，当前设置的比例自动生效</li>
+</ul>
+<h3 id="设计原则">设计原则 </h3>
+<ul>
+<li>不裁切图片（<code>object-contain</code> 而非 <code>object-cover</code>）</li>
+<li>白色背景模拟摄影书页面</li>
+<li>仅支持预设比例，不允许自由输入，保持视觉一致性</li>
+</ul>
+<h2 id="export-pipeline">Export Pipeline </h2>
+<p>published 摄影集支持导出为摄影书 PDF。Export Pipeline 采用分层架构，为未来多格式输出预留扩展点。</p>
+<h3 id="export-architecture">Export Architecture </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>Collection + Photos
+       ↓
+buildBookDocument()          ← schema.ts
+       ↓
+BookDocument (中间结构)
+       ↓
+resolveBookImages()          ← schema.ts (加载图片 base64)
+       ↓
+PhotoBook (react-pdf)        ← pdf.tsx (renderer)
+       ↓
+renderToBuffer() → PDF
+</code></pre><p>关键分层：</p>
+<ul>
+<li><strong>schema.ts</strong>：Collection → BookDocument（数据转换，与输出格式无关）</li>
+<li><strong>layout.ts</strong>：页面尺寸、边距、排版常量（所有 renderer 共用）</li>
+<li><strong>pdf.tsx</strong>：PDF renderer（只是 BookDocument 的一个渲染目标）</li>
+<li><strong>types.ts</strong>：BookDocument / Page 类型定义</li>
+</ul>
+<p>未来扩展（IDML / EPUB / Web Book）只需新增 renderer，复用 <code>buildBookDocument()</code> 和 <code>layout.ts</code>。</p>
+<h3 id="页面类型">页面类型 </h3>
+<p>BookDocument 的 Page 支持四种类型：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>说明</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cover</code></td>
+<td>封面（全幅照片或标题文字）</td>
+<td>第一页</td>
+</tr>
+<tr>
+<td><code>full-bleed</code></td>
+<td>照片铺满页面</td>
+<td>关键作品跨页</td>
+</tr>
+<tr>
+<td><code>image-with-caption</code></td>
+<td>照片 + 下方 caption</td>
+<td>标准照片页</td>
+</tr>
+<tr>
+<td><code>spread</code></td>
+<td>跨页照片</td>
+<td>横幅作品（待实现）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="文件名规则">文件名规则 </h3>
+<p><code>{collection-title}-v{version}.pdf</code>，如 <code>tokyo-rain-v3.pdf</code>。标题中的非字母数字字符转为连字符。</p>
+<h3 id="技术实现">技术实现 </h3>
+<ul>
+<li><strong>PDF 引擎</strong>：<code>@react-pdf/renderer</code>（React 组件 → PDF，非 html2canvas / 截图）</li>
+<li><strong>图片加载</strong>：<code>resolveBookImages()</code> 从 <code>uploads/</code> 读取照片转为 base64 data URL</li>
+<li><strong>API</strong>：<code>GET /api/collections/[id]/export</code> → 返回 PDF 文件流</li>
+<li><strong>UI</strong>：published 状态 toolbar 的"导出 PDF"按钮（<code>&lt;a href&gt;</code> 直接下载）</li>
+</ul>
+<h3 id="与现有系统的关系">与现有系统的关系 </h3>
+<ul>
+<li>不修改 Collection 数据结构</li>
+<li>不修改照片存储方式</li>
+<li>Export Pipeline 是纯新增层，读取现有数据，生成输出文件</li>
+<li>封面使用 <code>cover_photo_id</code>，照片顺序使用 <code>sort_order</code></li>
+</ul>
+<h3 id="pdf-字体">PDF 字体 </h3>
+<p>使用 Songti SC（宋体-简）Regular，从 macOS 系统字体提取存放于 <code>public/fonts/</code>。react-pdf 底层 PDFKit 自动子集化，仅嵌入实际使用的 glyph。</p>
+<h3 id="图片优化">图片优化 </h3>
+<p>导出前通过 <code>lib/export/image.ts</code> 对照片进行 sharp resize（最长边 3000px）+ JPEG compress（quality 0.85），显著减小 PDF 体积。原始照片不受影响。</p>
+<h3 id="pdf-布局要点">PDF 布局要点 </h3>
+<ul>
+<li>Image 组件使用 <code>maxWidth</code>/<code>maxHeight</code>，不要同时设 <code>width</code> 和 <code>height</code> 为 100%</li>
+<li><code>contentColumn → imageArea(flex:1) + captionArea(48px)</code> 确保 caption 不跨页</li>
+<li><code>objectFit: contain</code> 自动适配 portrait/landscape，无需手动检测方向</li>
+</ul>
+<h2 id="photo-sorting">Photo Sorting </h2>
+<p>瀑布流支持按拍摄时间排序。时间排序不是数据库功能，而是摄影叙事的一部分。</p>
+<h3 id="排序模式">排序模式 </h3>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>参数</th>
+<th>SQL</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>最新优先</td>
+<td><code>?sort=newest</code>（默认）</td>
+<td><code>ORDER BY COALESCE(date_taken, created_at) DESC</code></td>
+<td>最近拍摄在上</td>
+</tr>
+<tr>
+<td>最早优先</td>
+<td><code>?sort=oldest</code></td>
+<td><code>ORDER BY COALESCE(date_taken, created_at) ASC</code></td>
+<td>最早拍摄在上</td>
+</tr>
+</tbody>
+</table>
+<h3 id="时间数据来源">时间数据来源 </h3>
+<p>同 StatsPanel 的时间系统：<code>getPhotoDate()</code> — 优先 <code>date_taken</code>（EXIF），fallback <code>created_at</code>（上传时间）。使用 <code>COALESCE(date_taken, created_at)</code> 确保无 EXIF 照片也能参与排序。</p>
+<h3 id="排序在服务端完成">排序在服务端完成 </h3>
+<p><code>getUnarchivedPhotos(sort)</code> 接受排序参数，SQL 层 <code>ORDER BY</code>，不在前端对大数组排序。</p>
+<h3 id="ui">UI </h3>
+<p>FilterBar 右侧 pill 按钮：[最新] [最早]，当前选中黑底白字。切换即时触发 <code>fetch(/api/photos?unarchived=1&amp;sort=...)</code> 刷新瀑布流，无页面 reload。</p>
+<hr>
+<h2 id="api-接口">API 接口 </h2>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/upload</code></td>
+<td>上传照片（FormData，支持多文件；可选 <code>collectionId</code> 或 <code>newCollectionTitle</code>）</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/photos</code></td>
+<td>获取照片列表；<code>?unarchived=1</code> 只返回未归档照片；<code>?collectionId=X</code> 返回指定摄影集照片</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/photos/[id]/file</code></td>
+<td>获取照片原始文件（图片二进制）</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/photos/[id]/note</code></td>
+<td>更新照片备注（Body: <code>{ "note": "备注内容" }</code>）</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/photos/[id]/move</code></td>
+<td>在摄影集内移动照片位置（Body: <code>{ "collectionId", "direction": "up"|"down" }</code>）</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/photos/[id]</code></td>
+<td>更新照片字段（当前支持 <code>collection_id</code> 导入摄影集）</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/photos/[id]</code></td>
+<td>删除照片（copied 模式同时删除文件，自动清理封面 + 重整排序）</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/stats</code></td>
+<td>获取 EXIF 参数统计（6 维度分布数据）</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/collections</code></td>
+<td>获取所有摄影集列表（含前 3 张预览照片）；<code>?editable=1</code> 仅返回 draft + ready</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/collections</code></td>
+<td>创建新摄影集（Body: <code>{ "title": "..." }</code>）</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/collections/[id]</code></td>
+<td>获取单个摄影集详情（含照片列表）</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/collections/[id]</code></td>
+<td>更新摄影集（title/description/status/cover_photo_id）</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/collections/[id]/export</code></td>
+<td>导出摄影书 PDF（根据 book_ratio 生成相应尺寸）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="数据库表结构">数据库表结构 </h2>
+<h3 id="photos-表"><code>photos</code> 表 </h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>INTEGER (PK)</td>
+<td>自增主键</td>
+</tr>
+<tr>
+<td><code>filename</code></td>
+<td>TEXT</td>
+<td>存储在 uploads/ 下的文件名（UUID）</td>
+</tr>
+<tr>
+<td><code>original_name</code></td>
+<td>TEXT</td>
+<td>用户上传的原始文件名</td>
+</tr>
+<tr>
+<td><code>camera_model</code></td>
+<td>TEXT</td>
+<td>相机型号，如 "SONY ILCE-7M4"</td>
+</tr>
+<tr>
+<td><code>lens_model</code></td>
+<td>TEXT</td>
+<td>镜头型号，如 "FE 24-70mm F2.8 GM II"</td>
+</tr>
+<tr>
+<td><code>focal_length</code></td>
+<td>TEXT</td>
+<td>焦距，如 "70mm"</td>
+</tr>
+<tr>
+<td><code>iso</code></td>
+<td>INTEGER</td>
+<td>ISO 值，如 3200</td>
+</tr>
+<tr>
+<td><code>aperture</code></td>
+<td>TEXT</td>
+<td>光圈，如 "f/2.8"</td>
+</tr>
+<tr>
+<td><code>shutter_speed</code></td>
+<td>TEXT</td>
+<td>快门速度，如 "1/250"</td>
+</tr>
+<tr>
+<td><code>note</code></td>
+<td>TEXT</td>
+<td>用户备注，默认空字符串</td>
+</tr>
+<tr>
+<td><code>storage_mode</code></td>
+<td>TEXT</td>
+<td>存储模式：<code>copied</code>（Web 上传复制）或 <code>referenced</code>（原文件引用）</td>
+</tr>
+<tr>
+<td><code>collection_id</code></td>
+<td>INTEGER</td>
+<td>所属摄影集 ID，NULL 表示未归档</td>
+</tr>
+<tr>
+<td><code>sort_order</code></td>
+<td>INTEGER</td>
+<td>在摄影集内的排序位置，NULL 表示未排序</td>
+</tr>
+<tr>
+<td><code>date_taken</code></td>
+<td>TEXT</td>
+<td>拍摄时间（ISO 8601 格式）</td>
+</tr>
+<tr>
+<td><code>file_size</code></td>
+<td>INTEGER</td>
+<td>文件大小（字节）</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>记录创建时间，默认当前时间</td>
+</tr>
+</tbody>
+</table>
+<h3 id="collections-表"><code>collections</code> 表 </h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>INTEGER (PK)</td>
+<td>自增主键</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>TEXT</td>
+<td>摄影集标题</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>TEXT</td>
+<td>摄影集描述</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td>状态：<code>draft</code>（待整理）、<code>ready</code>（可发布）、<code>published</code>（已发布）</td>
+</tr>
+<tr>
+<td><code>cover_photo_id</code></td>
+<td>INTEGER</td>
+<td>封面照片 ID，可为空</td>
+</tr>
+<tr>
+<td><code>sort_order</code></td>
+<td>TEXT</td>
+<td>照片排序 JSON 数组 <code>[photoId, ...]</code></td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>INTEGER</td>
+<td>发布版本号，默认 1，每次发布 +1</td>
+</tr>
+<tr>
+<td><code>book_ratio</code></td>
+<td>TEXT</td>
+<td>摄影书比例，默认 <code>4:5</code>，可选 <code>1:1</code> <code>3:2</code> <code>2:3</code></td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>创建时间，默认当前时间</td>
+</tr>
+</tbody>
+</table>
+<h2 id="开始使用">开始使用 </h2>
+<p>需要 Node.js v20 或以上版本。</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">npm</span> <span class="token function">install</span>
+<span class="token function">npm</span> run dev
+</code></pre><p>启动后打开 <a href="http://localhost:3000">http://localhost:3000</a>，拖入照片即可使用。访问 <a href="http://localhost:3000/collections">http://localhost:3000/collections</a> 查看摄影集。</p>
+<h2 id="注意事项">注意事项 </h2>
+<ul>
+<li>无 EXIF 信息的照片（如截图、网图）上传后部分字段会显示为空或 "—"</li>
+<li>语音输入依赖 Web Speech API，仅支持 Chrome/Edge 浏览器，且需要 HTTPS 或 localhost 环境下才能使用</li>
+<li>仅支持 JPG/JPEG/PNG 格式的图片文件上传</li>
+</ul>
+
+      </div>
+      
+      
+    
+    
+    
+    
+    
+    
+  
+    </body></html>
