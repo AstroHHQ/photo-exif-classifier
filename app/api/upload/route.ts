@@ -1,8 +1,12 @@
 /**
  * 照片上传接口 —— POST /api/upload
  *
- * 接收用户上传的照片，保存到 uploads/ 目录，
- * 自动提取 EXIF 信息，写入 SQLite 数据库。
+ * 接收用户上传的照片，支持两种存储模式：
+ * - referenced（默认）：文件保存到 uploads/，标记为引用模式。删除时仅移除数据库记录。
+ * - copied：文件复制到 uploads/，标记为复制模式。删除时同时删除文件。
+ *
+ * Web MVP 限制：浏览器上传无法获取原始文件路径，两种模式均需保存文件到 uploads/。
+ * Electron 迁移后 referenced 模式将真正实现零复制（仅存 original_path）。
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -34,23 +38,20 @@ export async function POST(request: NextRequest) {
     const collectionIdRaw = formData.get("collectionId");
     const newCollectionTitle = formData.get("newCollectionTitle");
 
-    console.log("[upload API] collectionIdRaw:", collectionIdRaw);
-    console.log("[upload API] newCollectionTitle:", newCollectionTitle);
-
     let collectionId: number | null = null;
     if (collectionIdRaw) {
       collectionId = parseInt(String(collectionIdRaw), 10);
-      console.log("[upload API] uploading to existing collection:", collectionId);
     } else if (newCollectionTitle) {
-      console.log("[upload API] creating new collection:", String(newCollectionTitle).trim());
       const newCollection = createCollection({
         title: String(newCollectionTitle).trim(),
       });
       collectionId = newCollection.id;
-      console.log("[upload API] new collection created, id:", collectionId);
-    } else {
-      console.log("[upload API] uploading to homepage (no collection)");
     }
+
+    // 1.6 存储模式（默认 referenced）
+    const storageModeRaw = formData.get("storage_mode");
+    const storageMode: "copied" | "referenced" =
+      storageModeRaw === "copied" ? "copied" : "referenced";
 
     const uploadsDir = path.join(process.cwd(), "uploads");
     await fs.mkdir(uploadsDir, { recursive: true });
@@ -87,21 +88,23 @@ export async function POST(request: NextRequest) {
         camera_model: exif.cameraModel,
         lens_model: exif.lensModel,
         focal_length: exif.focalLength,
+        focal_length_35mm: exif.focalLength35mm,
         iso: exif.iso,
         aperture: exif.aperture,
         shutter_speed: exif.shutterSpeed,
         note: "",
-        storage_mode: "copied",
+        storage_mode: storageMode,
         collection_id: collectionId,
         sort_order: null,
         date_taken: exif.dateTaken,
         file_size: entry.size,
+        original_path: storageMode === "referenced" ? filePath : null,
       });
-      console.log("[upload API] inserted photo id:", id, "collection_id:", collectionId);
 
       results.push({
         id,
         original_name: entry.name,
+        storage_mode: storageMode,
         ...exif,
       });
     }

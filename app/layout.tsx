@@ -30,6 +30,9 @@ export default function RootLayout({
               <a href="/collections" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
                 摄影集
               </a>
+              <a href="/analytics" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
+                统计分析
+              </a>
               <span className="text-xs text-gray-400">MVP</span>
             </nav>
           </div>

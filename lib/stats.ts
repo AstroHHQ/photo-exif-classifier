@@ -6,6 +6,7 @@
  */
 
 import { getAllPhotos, type Photo } from "./db";
+import { detectCropFactor, parseFocalLengthMm, FOCAL_RANGES, classifyFocalRange, computeEquivalentFocalLength } from "./focalRanges";
 
 /** 统计项：参数值 + 出现次数 */
 interface StatItem {
@@ -17,6 +18,29 @@ interface StatItem {
 export interface DailyCount {
   date: string; // "2026-05-26"
   count: number;
+}
+
+/** 时段拍摄计数 */
+export interface TimeOfDayCount {
+  period: "上午" | "下午" | "傍晚" | "夜晚";
+  count: number;
+}
+
+/** 摄影语言分布项 */
+export interface FocalDistribution {
+  /** 摄影语言范围，如 "广角"、"标准焦段" */
+  range: string;
+  /** 等效焦段范围，如 "21-35mm" */
+  mm: string;
+  count: number;
+  percentage: number;
+}
+
+/** 月度摄影语言分布 */
+export interface MonthlyFocalDist {
+  month: string;   // "2026-01"
+  label: string;   // "1月"
+  distribution: FocalDistribution[];
 }
 
 /** 统计面板所需的所有数据 */
@@ -34,6 +58,16 @@ export interface Stats {
   lastPhotoDate: string | null;
   /** 最近 30 天拍摄数量 */
   recentCount: number;
+  /** 最近 90 天拍摄数量 */
+  last90Days: number;
+  /** 本年累计拍摄数量 */
+  yearlyCount: number;
+  /** 时段分布（上午/下午/傍晚/夜晚） */
+  timeOfDay: TimeOfDayCount[];
+  /** 摄影语言分布（基于 35mm 等效焦段） */
+  focalDistribution: FocalDistribution[];
+  /** 过去 12 个月每月的摄影语言分布 */
+  monthlyFocalDistribution: MonthlyFocalDist[];
 }
 
 /** 将 null/undefined 统一为 "未知" */
@@ -57,6 +91,14 @@ function parseDate(raw: string): Date | null {
 /** 格式化日期为 YYYY-MM-DD */
 function formatDayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** 根据小时数返回时段 */
+function getTimePeriod(hour: number): "上午" | "下午" | "傍晚" | "夜晚" {
+  if (hour >= 6 && hour < 12) return "上午";
+  if (hour >= 12 && hour < 18) return "下午";
+  if (hour >= 18 && hour < 21) return "傍晚";
+  return "夜晚";
 }
 
 export function getStats(): Stats {
@@ -85,7 +127,14 @@ export function getStats(): Stats {
 
   let lastPhotoDate: string | null = null;
   let recentCount = 0;
+  let last90Days = 0;
+  let yearlyCount = 0;
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const yearStart = new Date(now.getFullYear(), 0, 1);
+
+  // 时段分布
+  const timeOfDayMap: Record<string, number> = { "上午": 0, "下午": 0, "傍晚": 0, "夜晚": 0 };
 
   for (const p of photos) {
     const raw = p.date_taken || p.created_at;
@@ -106,11 +155,78 @@ export function getStats(): Stats {
     if (d >= thirtyDaysAgo) {
       recentCount++;
     }
+    if (d >= ninetyDaysAgo) {
+      last90Days++;
+    }
+    if (d >= yearStart) {
+      yearlyCount++;
+    }
+
+    timeOfDayMap[getTimePeriod(d.getHours())]++;
   }
 
   const dailyActivity: DailyCount[] = Object.entries(dailyMap)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, count]) => ({ date, count }));
+
+  const timeOfDay: TimeOfDayCount[] = (["上午", "下午", "傍晚", "夜晚"] as const)
+    .map((period) => ({ period, count: timeOfDayMap[period] }))
+    .sort((a, b) => b.count - a.count);
+
+  // 等效焦段 → 摄影语言分布
+  const focalRangeMap: Record<string, number> = {};
+  for (const r of FOCAL_RANGES) focalRangeMap[r.range] = 0;
+  for (const p of photos) {
+    const eq = computeEquivalentFocalLength(p.focal_length_35mm, p.camera_model, p.focal_length);
+    if (eq !== null) {
+      const range = classifyFocalRange(eq);
+      focalRangeMap[range]++;
+    }
+  }
+  const focalDistribution: FocalDistribution[] = FOCAL_RANGES.map((r) => ({
+    range: r.range,
+    mm: r.mm,
+    count: focalRangeMap[r.range],
+    percentage: photos.length > 0 ? Math.round((focalRangeMap[r.range] / photos.length) * 100) : 0,
+  }));
+
+  // 月度摄影语言分布（过去 12 个月）
+  const monthlyMap: Record<string, Record<string, number>> = {};
+  for (const p of photos) {
+    const raw = p.date_taken || p.created_at;
+    if (!raw) continue;
+    const d = parseDate(raw);
+    if (!d) continue;
+    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!monthlyMap[monthKey]) {
+      monthlyMap[monthKey] = {};
+      for (const r of FOCAL_RANGES) monthlyMap[monthKey][r.range] = 0;
+    }
+    const eq = computeEquivalentFocalLength(p.focal_length_35mm, p.camera_model, p.focal_length);
+    if (eq !== null) {
+      monthlyMap[monthKey][classifyFocalRange(eq)]++;
+    }
+  }
+
+  // 生成过去 12 个月列表
+  const monthLabels: string[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    monthLabels.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+
+  const monthlyFocalDistribution: MonthlyFocalDist[] = monthLabels.map((mk) => {
+    const monthData = monthlyMap[mk] || {};
+    const total = Object.values(monthData).reduce((a, b) => a + b, 0);
+    const distribution: FocalDistribution[] = FOCAL_RANGES.map((r) => ({
+      range: r.range,
+      mm: r.mm,
+      count: monthData[r.range] || 0,
+      percentage: total > 0 ? Math.round(((monthData[r.range] || 0) / total) * 100) : 0,
+    }));
+    const [y, m] = mk.split("-");
+    return { month: mk, label: `${parseInt(m)}月`, distribution };
+  });
 
   return {
     cameras: aggregate((p) => p.camera_model || (p as any).Make),
@@ -123,6 +239,11 @@ export function getStats(): Stats {
     dailyActivity,
     lastPhotoDate,
     recentCount,
+    last90Days,
+    yearlyCount,
+    timeOfDay,
+    focalDistribution,
+    monthlyFocalDistribution,
   };
 }
 

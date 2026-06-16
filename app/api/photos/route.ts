@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const collectionId = searchParams.get("collectionId");
   const unarchived = searchParams.get("unarchived");
-  const sort = (searchParams.get("sort") as "newest" | "oldest") || "newest";
+  const sort = (searchParams.get("sort") as "date_desc" | "date_asc" | "imported_desc" | "imported_asc") || "date_desc";
 
   if (collectionId) {
     return NextResponse.json(getCollectionPhotos(parseInt(collectionId, 10)));

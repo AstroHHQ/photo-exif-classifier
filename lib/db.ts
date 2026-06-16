@@ -63,6 +63,10 @@ function initTables(db: Database.Database) {
   } catch { /* 列已存在，忽略 */ }
   // 迁移：将所有 sort_order=0 的照片改为 NULL（表示未排序）
   db.exec(`UPDATE photos SET sort_order = NULL WHERE sort_order = 0`);
+  // 兼容旧数据库：如果 focal_length_35mm 列不存在则添加
+  try {
+    db.exec(`ALTER TABLE photos ADD COLUMN focal_length_35mm INTEGER`);
+  } catch { /* 列已存在，忽略 */ }
 
   // 摄影集表
   db.exec(`
@@ -90,6 +94,10 @@ function initTables(db: Database.Database) {
   try {
     db.exec(`ALTER TABLE collections ADD COLUMN book_ratio TEXT NOT NULL DEFAULT '4:5'`);
   } catch { /* 列已存在，忽略 */ }
+  // 兼容旧数据库：如果 original_path 列不存在则添加
+  try {
+    db.exec(`ALTER TABLE photos ADD COLUMN original_path TEXT`);
+  } catch { /* 列已存在，忽略 */ }
 }
 
 /** 照片记录的类型定义 */
@@ -100,6 +108,8 @@ export interface Photo {
   camera_model: string | null;
   lens_model: string | null;
   focal_length: string | null;
+  /** 35mm 等效焦距（来自 EXIF FocalLengthIn35mmFilm），无此标签时为 null */
+  focal_length_35mm: number | null;
   iso: number | null;
   aperture: string | null;
   shutter_speed: string | null;
@@ -110,6 +120,8 @@ export interface Photo {
   date_taken: string | null;
   file_size: number;
   created_at: string;
+  /** referenced 模式存储原始文件路径，copied 模式为 null */
+  original_path: string | null;
 }
 
 /** 摄影集记录的类型定义 */
@@ -132,9 +144,9 @@ export function insertPhoto(photo: Omit<Photo, "id" | "created_at">): number {
   const d = getDb();
   const stmt = d.prepare(`
     INSERT INTO photos (filename, original_name, camera_model, lens_model,
-      focal_length, iso, aperture, shutter_speed, note, storage_mode, collection_id, sort_order, date_taken, file_size)
+      focal_length, focal_length_35mm, iso, aperture, shutter_speed, note, storage_mode, collection_id, sort_order, date_taken, file_size, original_path)
     VALUES (@filename, @original_name, @camera_model, @lens_model,
-      @focal_length, @iso, @aperture, @shutter_speed, @note, @storage_mode, @collection_id, @sort_order, @date_taken, @file_size)
+      @focal_length, @focal_length_35mm, @iso, @aperture, @shutter_speed, @note, @storage_mode, @collection_id, @sort_order, @date_taken, @file_size, @original_path)
   `);
   const result = stmt.run(photo);
   return Number(result.lastInsertRowid);
@@ -278,13 +290,28 @@ export function updateCollection(
  * sort: "newest"（默认，按拍摄时间倒序）| "oldest"（按拍摄时间正序）
  * 排序使用 COALESCE(date_taken, created_at) 确保无 EXIF 的照片也能正确排序。
  */
-export function getUnarchivedPhotos(sort: "newest" | "oldest" = "newest"): Photo[] {
+export function getUnarchivedPhotos(sort: "date_desc" | "date_asc" | "imported_desc" | "imported_asc" | "newest" | "oldest" = "date_desc"): Photo[] {
   const d = getDb();
-  const dir = sort === "oldest" ? "ASC" : "DESC";
+  let orderBy: string;
+  switch (sort) {
+    case "date_asc":
+    case "oldest":
+      orderBy = "COALESCE(date_taken, created_at) ASC, id ASC";
+      break;
+    case "imported_desc":
+      orderBy = "created_at DESC, id DESC";
+      break;
+    case "imported_asc":
+      orderBy = "created_at ASC, id ASC";
+      break;
+    case "date_desc":
+    case "newest":
+    default:
+      orderBy = "COALESCE(date_taken, created_at) DESC, id DESC";
+      break;
+  }
   return d
-    .prepare(
-      `SELECT * FROM photos WHERE collection_id IS NULL ORDER BY COALESCE(date_taken, created_at) ${dir}, id ${dir}`
-    )
+    .prepare(`SELECT * FROM photos WHERE collection_id IS NULL ORDER BY ${orderBy}`)
     .all() as Photo[];
 }
 
@@ -322,6 +349,88 @@ export function deletePhoto(id: number): Photo | undefined {
   }
 
   return photo;
+}
+
+/**
+ * 批量删除照片记录。
+ * 返回被删除照片的 filename + storage_mode 列表（供调用方清理文件）。
+ * 同时处理封面清理和 sort_order 重整。
+ */
+export interface BatchDeleteInfo {
+  id: number;
+  filename: string;
+  storage_mode: "copied" | "referenced";
+  collection_id: number | null;
+}
+
+export function batchDeletePhotos(photoIds: number[]): BatchDeleteInfo[] {
+  const d = getDb();
+  const deleted: BatchDeleteInfo[] = [];
+
+  // 收集受影响的摄影集（用于 sort_order 重整）
+  const affectedCollections = new Set<number>();
+
+  const deleteStmt = d.prepare("DELETE FROM photos WHERE id = ?");
+  const clearCoverStmt = d.prepare("UPDATE collections SET cover_photo_id = NULL WHERE cover_photo_id = ?");
+
+  const deleteOne = d.transaction((ids: number[]) => {
+    for (const id of ids) {
+      const photo = getPhotoById(id);
+      if (!photo) continue;
+
+      clearCoverStmt.run(id);
+
+      if (photo.collection_id != null) {
+        affectedCollections.add(photo.collection_id);
+      }
+
+      deleteStmt.run(id);
+      deleted.push({
+        id: photo.id,
+        filename: photo.filename,
+        storage_mode: photo.storage_mode,
+        collection_id: photo.collection_id,
+      });
+    }
+  });
+
+  deleteOne(photoIds);
+
+  // 重整受影响的摄影集 sort_order
+  for (const collectionId of affectedCollections) {
+    const remaining = d
+      .prepare("SELECT id FROM photos WHERE collection_id = ? AND sort_order IS NOT NULL ORDER BY sort_order ASC")
+      .all(collectionId) as { id: number }[];
+    remaining.forEach((p, i) => {
+      d.prepare("UPDATE photos SET sort_order = ? WHERE id = ?").run(i, p.id);
+    });
+  }
+
+  return deleted;
+}
+
+/**
+ * 批量移出摄影集（collection_id → NULL）。
+ * 不删除照片记录，不删除文件。
+ */
+export function batchRemoveFromCollection(photoIds: number[]): number {
+  const d = getDb();
+  let count = 0;
+  const clearCoverStmt = d.prepare("UPDATE collections SET cover_photo_id = NULL WHERE cover_photo_id = ?");
+
+  const removeOne = d.transaction((ids: number[]) => {
+    for (const id of ids) {
+      const photo = getPhotoById(id);
+      if (!photo || photo.collection_id == null) continue;
+
+      clearCoverStmt.run(id);
+      d.prepare("UPDATE photos SET collection_id = NULL, sort_order = NULL WHERE id = ?").run(id);
+      count++;
+    }
+  });
+
+  removeOne(photoIds);
+  return count;
 }
 
 /**

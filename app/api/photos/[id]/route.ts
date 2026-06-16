@@ -1,12 +1,12 @@
 /**
  * 照片操作接口 —— PATCH / DELETE /api/photos/[id]
  *
- * PATCH：更新照片字段（导入摄影集等）
+ * PATCH：更新照片字段（导入/移出摄影集）
  * DELETE：删除照片。copied 模式删除 uploads/ 文件 + 数据库记录；referenced 模式仅删除数据库记录
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { deletePhoto, getPhotoById, getCollectionById, updatePhotoCollectionId } from "@/lib/db";
+import { deletePhoto, getPhotoById, getCollectionById, updatePhotoCollectionId, getDb } from "@/lib/db";
 import fs from "fs/promises";
 import path from "path";
 
@@ -21,6 +21,19 @@ export async function PATCH(
   }
 
   const body = await request.json();
+
+  // 移出摄影集：collection_id 设为 null
+  if (body.collection_id === null) {
+    const photo = getPhotoById(photoId);
+    if (!photo) {
+      return NextResponse.json({ error: "照片不存在" }, { status: 404 });
+    }
+    const d = getDb();
+    d.prepare("UPDATE photos SET collection_id = NULL, sort_order = NULL WHERE id = ?").run(photoId);
+    // 清理封面引用
+    d.prepare("UPDATE collections SET cover_photo_id = NULL WHERE cover_photo_id = ?").run(photoId);
+    return NextResponse.json(getPhotoById(photoId));
+  }
 
   // 导入摄影集：更新 collection_id
   if (body.collection_id !== undefined) {

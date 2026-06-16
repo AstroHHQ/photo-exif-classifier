@@ -12,6 +12,8 @@ export interface ExifData {
   cameraModel: string | null;
   lensModel: string | null;
   focalLength: string | null;
+  /** 35mm 等效焦距（EXIF FocalLengthIn35mmFilm 标签），无此标签时为 null */
+  focalLength35mm: number | null;
   iso: number | null;
   aperture: string | null;
   shutterSpeed: string | null;
@@ -36,6 +38,7 @@ export function readExif(buffer: ArrayBuffer): ExifData {
     cameraModel: getString(tags, "Model"),
     lensModel: getString(tags, "LensModel"),
     focalLength: getDescription(tags, "FocalLength"),
+    focalLength35mm: getNumber(tags, "FocalLengthIn35mmFilm"),
     iso: getNumber(tags, "ISOSpeedRatings"),
     aperture: getDescription(tags, "FNumber"),
     shutterSpeed: getDescription(tags, "ExposureTime"),

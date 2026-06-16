@@ -44,9 +44,25 @@
 | 图片处理 | sharp |
 
 - **API Route 模式**：`GET /api/collections/[id]/export` 等，服务端直读 SQLite + 文件系统
-- **uploads 目录**：当前 copied 模式（照片复制到 uploads/），未来可能 referenced + storage_mode
+- **Storage Architecture V2**：referenced（默认，删除仅移除记录）和 copied（历史，删除同步删文件）。UploadZone 默认引用模式
+- **摄影集删除 = 移出集合**：`collection_id` 置 NULL，照片回到瀑布流。摄影集不拥有照片，不删除原始文件
 - **Electron 路线**：API Route 暂不迁移 IPC，保留 HTTP 模式便于开发调试
 - **无 ORM**：直接 SQL，COALESCE 处理 date_taken/created_at fallback
+
+### Statistics Data Source 规则
+
+**Statistics ≠ Current Waterfall — 这是摄影产品设计决策，不是 bug。**
+
+| 范围 | 函数 | SQL |
+|------|------|-----|
+| 全库统计 | `getAllPhotos()` | `SELECT * FROM photos` |
+| 瀑布流 | `getUnarchivedPhotos()` | `WHERE collection_id IS NULL` |
+
+- `lib/stats.ts` → `getStats()` 使用 `getAllPhotos()` — 统计整个摄影库
+- `PhotoContainer.tsx` → `/api/photos?unarchived=1` — 仅显示未归档照片
+- StatsPanel、PhotographyInsights 均通过 `/api/stats` 获取全库数据
+- 照片导入摄影集后统计不变 — 相机/镜头/焦段/光圈/时段分布不受归档影响
+- **禁止**将统计改为 `collection_id IS NULL` 过滤 — 这会导致归档照片从统计中消失
 
 ### z-index 分层规则
 
@@ -411,7 +427,111 @@ base64 data URL → BookDocument Page → PDF embed
 
 ---
 
+## Photography Insights System
+
+规则引擎驱动的摄影习惯分析卡片。核心设计决策：
+
+- **不是 AI**：纯规则引擎，无大模型依赖，零成本、完全离线
+- **数据复用**：共享 `/api/stats`，不新增 DB 查询。Stats 接口扩展 `timeOfDay` 字段
+- **规则函数签名**：`(stats: Stats) => Insight | null` — 每条规则独立，可单独替换
+- **阈值设计**：焦段 25%、光圈 60%、设备 40% — 避免弱信号触发无意义洞察
+- **展示位置**：首页 UploadZone 下方，与 StatsPanel 并列，高度接近
+
+### UI 哲学
+
+- Apple Photos 年度回顾 + Notion 卡片风格
+- 编号 + 标题 + 数据百分比，不含糊其辞
+- 禁止营销文案（"解锁你的摄影潜力"）、ChatGPT 风格（"看起来你是个…"）
+- 底部标注"规则引擎生成 · 非 AI"，诚实透明
+
 ## Change Log
+
+### 2026-06-16
+
+#### Feature
+- Homepage Information Architecture V2 — 首页重构为照片优先的双栏 Hero 布局
+- HeroInsights — 首页自然语言摄影摘要（无图表、无百分比、无统计细节）
+- DashboardOverview — 首页精简 Dashboard（总数 + 近 30 天 + 热力图 + 设备名称）
+- Analytics Page (`/analytics`) — 独立统计分析页面，承载完整 StatsPanel + PhotographyInsights
+- 导航栏新增「统计分析」入口
+
+#### Architecture
+- 首页视觉层级：照片（主体）> 洞察（摘要）> 数据（概览）
+- 统计模块从首页迁移到 `/analytics`——首页不再承担统计中心角色
+- `app/page.tsx` → Hero 双栏（左 35% UploadZone + HeroInsights，右 65% DashboardOverview）
+- `app/analytics/page.tsx` → StatsPanel + PhotographyInsights 完整展示
+- `components/HeroInsights.tsx` → 从 /api/stats 生成自然语言摘要行
+- `components/DashboardOverview.tsx` → MiniHeatmap + StatFigure + 设备摘要
+- StatsPanel 保留完整五段 Dashboard（仅用于 Analytics 页面）
+- UploadZone 在首页左栏紧凑展示（视觉权重降低）
+
+#### Feature
+- FilterBar 完全重写 — 6 维度筛选系统（相机 / 镜头 / 时间 / 焦段 / 备注 / 搜索）
+- 时间筛选 8 种预设 — 全部、今天、7天、30天、90天、本年、年份、自定义范围
+- 焦段筛选 — 6 类摄影语言范围（超广角 / 广角 / 标准 / 中长焦 / 长焦 / 超长焦）
+- 备注筛选 — 全部、有备注、无备注
+- 关键词搜索 — 文件名 + 备注 模糊匹配
+- 4 种排序 — date_desc、date_asc、imported_desc、imported_asc
+- PhotoContainer 客户端筛选引擎 — `matchesTimeFilter()` + `filteredPhotos` useMemo 统一过滤
+- 首页筛选哲学 — "首页负责找照片，Analytics 负责分析照片，摄影集负责组织照片"
+
+#### Architecture
+- `lib/focalRanges.ts` — 共享焦段计算模块，从 stats.ts 提取供前后端复用
+- `computeEquivalentFocalLength()` 签名变更 — 从 `(photo: Photo)` 改为 `(focalLength35mm, cameraModel, focalLength)` 三个独立参数
+- `lib/db.ts` `getUnarchivedPhotos()` — switch 分支支持 4 种排序（date_desc/date_asc/imported_desc/imported_asc），date 类使用 COALESCE(date_taken, created_at)
+- `app/api/photos/route.ts` — sort 参数类型扩展为 4 种
+- `components/FilterBar.tsx` — Props 从 ~12 扩展到 ~25，三行布局（搜索+排序 / 筛选下拉+pill / 条件行）
+- `components/PhotoContainer.tsx` — 新增 timeFilter/noteStatus/focalRange/searchQuery/sortOrder 状态 + 客户端过滤逻辑
+- `components/PhotoCard.tsx` — PhotoData 接口新增 `focal_length_35mm`、`created_at` 字段
+- 明确排除 ISO/光圈/快门 筛选 — 这些属于 Analytics 页面分析维度，不属于首页找照片维度
+- `README.md` 新增「Photo Library Filtering Philosophy」章节 — 三页职责表 + 筛选架构 + 排除列表
+
+### 2026-06-14
+
+#### Feature
+- 等效焦段引擎 — 35mm Equivalent Focal Length 三级换算（EXIF 标签 → Crop Factor 检测 → 原始值退回）
+- Crop Factor 自动检测 — 从相机型号字符串识别画幅（Sony/Canon/Nikon/Fujifilm/Leica/RICOH）
+- 摄影语言分布 — 6 类焦段范围（超广角 ≤20 / 广角 21-35 / 标准 36-70 / 中长焦 71-105 / 长焦 106-200 / 超长焦 200+）
+- Photography Dashboard 升级 — StatsPanel 重构为五段 Dashboard（Activity/Camera/Lens/Focal Language/Evolution）
+- Activity 计数卡片 — 30 天 / 90 天 / 本年累计 / 总照片数
+- Lens Usage — Top 5 镜头使用分布
+- 垂直柱状图 — 纯 CSS 六段摄影语言分布（灰度色阶、百分比标注）
+- Photography Evolution — 12 个月堆叠柱状图时间轴，追踪摄影语言变化趋势
+- PhotographyInsights — ruleFocalLanguage（摄影语言倾向）+ ruleFocalEvolution（摄影语言演变）
+- `focal_length_35mm` 数据库列 — 存储 EXIF FocalLengthIn35mmFilm 标签值
+
+#### Architecture
+- `lib/exif.ts` → ExifData 新增 `focalLength35mm: number | null`
+- `lib/db.ts` → Photo 接口新增 `focal_length_35mm`，insertPhoto SQL 更新，ALTER TABLE 迁移
+- `lib/stats.ts` → `detectCropFactor()` `parseFocalLengthMm()` `classifyFocalRange()` `computeEquivalentFocalLength()` + `FocalDistribution` 类型 + `monthlyFocalDistribution` 字段 + `last90Days`/`yearlyCount`
+- `app/api/upload/route.ts` → 上传时传递 `focal_length_35mm` 到 DB
+- `FOCAL_RANGES` 常量定义 6 类摄影语言范围（min/max/range/mm label）
+- StatsPanel 新增 `VerticalBarChart`（纯 CSS 柱状图）、`EvolutionTimeline`（12 月堆叠柱）、`StatCount`、`UsageBar` 组件
+- PhotographyInsights 新增 `ruleFocalEvolution`（比较最近 3 个月 vs 整体分布，检测 ≥10pp 偏移）
+- 移除 `ProportionBar` 组件，统一为 `UsageBar`
+
+### 2026-06-12
+
+#### Feature
+- PhotographyInsights — 规则引擎摄影习惯分析卡片（5 条规则、3-5 条洞察）
+- Stats 接口扩展 — 新增 `timeOfDay` 时段分布（上午/下午/傍晚/夜晚）
+- Storage Architecture V2 — referenced 模式为默认，摄影集删除改为移出集合
+- Batch Upload — 文件夹导入 + 多文件选择 + 自动分批（50张/批）+ 进度条
+- Batch Delete — 多选 checkbox + 全选/反选 + 批量删除（区分 copied/referenced）+ 批量移出摄影集
+
+#### Architecture
+- Statistics Data Source 规则明确化 — `getStats()` 使用 `getAllPhotos()`（全库），瀑布流使用 `getUnarchivedPhotos()`（仅未归档），两者数据源独立
+- `photos` 表新增 `original_path` 字段 — referenced 模式存储文件路径
+- `insertPhoto()` 支持 `original_path`，上传 API 默认 `storage_mode = "referenced"`
+- PATCH `/api/photos/[id]` 支持 `collection_id: null`（移出摄影集）
+- 摄影集内删除照片 → 移出集合（`collection_id` 置 NULL），不删照片
+- UploadZone 新增存储模式选择器（引用/复制），默认引用模式
+- UploadZone 新增文件夹选择 + 分批上传（BATCH_SIZE=50）+ 进度条
+- PhotoCard 新增多选 checkbox（左侧），selectable 模式
+- PhotoGrid 新增批量操作工具栏（已选N张 · 全选 · 删除选中 · 取消选择）
+- FilterBar 新增"选择"/"完成"切换按钮
+- `batchDeletePhotos()` / `batchRemoveFromCollection()` — 事务内批量操作
+- `DELETE /api/photos/batch` — 支持 library 和 collection 两种 context
 
 ### 2026-05-31
 

@@ -57,6 +57,8 @@ export default function CollectionDetailPage() {
   const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [selectedPhotoId, setSelectedPhotoId] = useState<number | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // 获取摄影集详情（含照片列表）
   const fetchCollection = useCallback(() => {
@@ -192,12 +194,16 @@ export default function CollectionDetailPage() {
     [id]
   );
 
-  // 删除照片
-  const handleDelete = useCallback(
+  // 移出摄影集（仅移除 collection_id，照片回到首页瀑布流）
+  const handleRemoveFromCollection = useCallback(
     async (photoId: number) => {
-      if (!window.confirm("确认删除这张照片？")) return;
+      if (!window.confirm("将此照片移出摄影集？照片会重新出现在首页瀑布流中。")) return;
       try {
-        await fetch(`/api/photos/${photoId}`, { method: "DELETE" });
+        await fetch(`/api/photos/${photoId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ collection_id: null }),
+        });
         setPhotos((prev) => prev.filter((p) => p.id !== photoId));
         setCollection((prev) =>
           prev && prev.cover_photo_id === photoId
@@ -205,11 +211,32 @@ export default function CollectionDetailPage() {
             : prev
         );
       } catch (err) {
-        console.error("删除失败:", err);
+        console.error("移出失败:", err);
       }
     },
     [id]
   );
+
+  // 批量移出摄影集
+  const handleBatchRemove = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`将选中的 ${selectedIds.size} 张照片移出摄影集？照片会重新出现在首页瀑布流中。`)) return;
+    try {
+      const res = await fetch("/api/photos/batch", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photo_ids: Array.from(selectedIds), context: "collection" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPhotos((prev) => prev.filter((p) => !selectedIds.has(p.id)));
+        setSelectedIds(new Set());
+        setSelectionMode(false);
+      }
+    } catch (err) {
+      console.error("批量移出失败:", err);
+    }
+  }, [selectedIds, id]);
 
   if (loading) {
     return (
@@ -392,17 +419,44 @@ export default function CollectionDetailPage() {
               </p>
             </div>
           ) : (
-            <PhotoGrid
-              photos={photos}
-              onPhotoClick={(photoId) => setSelectedPhotoId(photoId)}
-              showSortControls
-              onMoveUp={(photoId) => handleMove(photoId, "up")}
-              onMoveDown={(photoId) => handleMove(photoId, "down")}
-              showCoverButton
-              coverPhotoId={collection.cover_photo_id}
-              onSetCover={handleSetCover}
-              onDelete={handleDelete}
-            />
+            <>
+              {/* 选择模式切换按钮 */}
+              <div className="flex items-center gap-2 mb-4">
+                <button
+                  onClick={() => {
+                    setSelectionMode((prev) => !prev);
+                    setSelectedIds(new Set());
+                  }}
+                  className={`text-[10px] px-2.5 py-1 rounded-full transition-colors ${
+                    selectionMode
+                      ? "bg-gray-800 text-white"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}
+                >
+                  {selectionMode ? "完成" : "选择照片"}
+                </button>
+              </div>
+
+              <PhotoGrid
+                photos={photos}
+                onPhotoClick={(photoId) => {
+                  if (selectionMode) return;
+                  setSelectedPhotoId(photoId);
+                }}
+                showSortControls
+                onMoveUp={(photoId) => handleMove(photoId, "up")}
+                onMoveDown={(photoId) => handleMove(photoId, "down")}
+                showCoverButton
+                coverPhotoId={collection.cover_photo_id}
+                onSetCover={handleSetCover}
+                onDelete={handleRemoveFromCollection}
+                selectable={selectionMode}
+                selectedIds={selectedIds}
+                onSelectionChange={setSelectedIds}
+                onBatchDelete={handleBatchRemove}
+                batchActionLabel="移出摄影集"
+              />
+            </>
           )}
 
           {/* 照片详情弹窗 */}

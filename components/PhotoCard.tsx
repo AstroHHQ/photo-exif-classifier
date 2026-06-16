@@ -18,6 +18,7 @@ export interface PhotoData {
   camera_model: string | null;
   lens_model: string | null;
   focal_length: string | null;
+  focal_length_35mm: number | null;
   iso: number | null;
   aperture: string | null;
   shutter_speed: string | null;
@@ -26,6 +27,7 @@ export interface PhotoData {
   collection_id?: number | null;
   sort_order: number | null;
   date_taken: string | null;
+  created_at: string;
   file_size: number;
 }
 
@@ -43,6 +45,10 @@ interface Props {
   onDelete?: () => void;
   collections?: { id: number; title: string }[];
   onImportToCollection?: (photoId: number, collectionId: number) => void;
+  /** 多选模式 */
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 export default function PhotoCard({
@@ -59,6 +65,9 @@ export default function PhotoCard({
   onDelete,
   collections,
   onImportToCollection,
+  selectable,
+  selected,
+  onToggleSelect,
 }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -104,6 +113,29 @@ export default function PhotoCard({
             loaded ? "opacity-100" : "opacity-0"
           }`}
         />
+
+        {/* 多选 checkbox（左上角，始终可见） */}
+        {selectable && (
+          <div
+            className="absolute top-2 left-2 z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={onToggleSelect}
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                selected
+                  ? "bg-gray-800 border-gray-800 text-white"
+                  : "bg-white/70 border-gray-300 hover:border-gray-400"
+              }`}
+            >
+              {selected && (
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* hover：底部 metadata overlay */}
         <div

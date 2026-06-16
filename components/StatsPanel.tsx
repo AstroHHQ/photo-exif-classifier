@@ -1,13 +1,21 @@
 "use client";
 
 /**
- * StatsPanel —— 摄影档案可视化。
+ * StatsPanel —— 摄影档案 Dashboard。
  *
- * GitHub contribution 风格热力图展示拍摄活跃度。
- * 视觉语言：单色灰度、细线 icon、横向占比条。
+ * 五个部分：
+ * 1. Photography Activity — 拍摄活跃度（计数卡片 + GitHub 热力图）
+ * 2. Camera Usage — 主力相机 Top 3
+ * 3. Lens Usage — 主力镜头 Top 5
+ * 4. Photography Language Distribution — 垂直柱状图（6 类摄影语言）
+ * 5. Photography Evolution — 12 个月摄影语言变化趋势
+ *
+ * 视觉语言：单色灰度、纯 CSS 实现、无图表库依赖。
  */
 
 import { useEffect, useState } from "react";
+
+/* ---- 类型 ---- */
 
 interface StatItem {
   value: string;
@@ -17,6 +25,19 @@ interface StatItem {
 interface DailyCount {
   date: string;
   count: number;
+}
+
+interface FocalDist {
+  range: string;
+  mm: string;
+  count: number;
+  percentage: number;
+}
+
+interface MonthlyFocalDist {
+  month: string;
+  label: string;
+  distribution: FocalDist[];
 }
 
 interface StatsData {
@@ -30,6 +51,11 @@ interface StatsData {
   dailyActivity: DailyCount[];
   lastPhotoDate: string | null;
   recentCount: number;
+  last90Days: number;
+  yearlyCount: number;
+  timeOfDay: { period: string; count: number }[];
+  focalDistribution: FocalDist[];
+  monthlyFocalDistribution: MonthlyFocalDist[];
 }
 
 /* ---- 极简细线 icon ---- */
@@ -38,6 +64,19 @@ function IconCamera() {
   return (
     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h2l1-2h6l1 2h2a2 2 0 012 2v8a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2zm7 10a4 4 0 100-8 4 4 0 000 8z" />
+    </svg>
+  );
+}
+
+function IconLens() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4" />
+      <line x1="12" y1="3" x2="12" y2="9" />
+      <line x1="12" y1="15" x2="12" y2="21" />
+      <line x1="3" y1="12" x2="9" y2="12" />
+      <line x1="15" y1="12" x2="21" y2="12" />
     </svg>
   );
 }
@@ -65,21 +104,22 @@ function IconCalendar() {
   );
 }
 
-/* ---- 占比条 ---- */
-
-function ProportionBar({ value, count, total, maxWidth }: { value: string; count: number; total: number; maxWidth: number }) {
-  const pct = total > 0 ? (count / total) * 100 : 0;
-  const barWidth = (count / maxWidth) * 100;
+function IconTrend() {
   return (
-    <div className="flex items-center gap-2 text-[11px]">
-      <span className="w-20 text-gray-500 truncate shrink-0 text-right">{value}</span>
-      <div className="flex-1 h-3 bg-gray-100 rounded-sm overflow-hidden">
-        <div
-          className="h-full bg-gray-400 rounded-sm transition-all duration-500"
-          style={{ width: `${barWidth}%` }}
-        />
-      </div>
-      <span className="w-8 text-gray-400 shrink-0 tabular-nums">{pct.toFixed(0)}%</span>
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+      <polyline points="3 17 9 11 13 15 21 7" />
+      <polyline points="16 7 21 7 21 12" />
+    </svg>
+  );
+}
+
+/* ---- 计数卡片 ---- */
+
+function StatCount({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="flex flex-col items-center px-3 py-2 rounded-lg bg-gray-50 min-w-[64px]">
+      <span className="text-[10px] text-gray-400">{label}</span>
+      <span className="text-lg font-light text-gray-700 tabular-nums">{count.toLocaleString()}</span>
     </div>
   );
 }
@@ -100,21 +140,18 @@ const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function ActivityHeatmap({ dailyActivity }: { dailyActivity: DailyCount[] }) {
-  // 补齐开头到 Sunday
   const firstDate = new Date(dailyActivity[0].date);
-  const startDay = firstDate.getDay(); // 0=Sun
+  const startDay = firstDate.getDay();
   const padded: (DailyCount | null)[] = [
     ...Array(startDay).fill(null),
     ...dailyActivity,
   ];
 
-  // 按周分组（每 7 天）
   const weeks: (DailyCount | null)[][] = [];
   for (let i = 0; i < padded.length; i += 7) {
     weeks.push(padded.slice(i, i + 7));
   }
 
-  // 月份标签：记录每个月份首次出现的列索引
   const monthMarkers: { col: number; label: string }[] = [];
   weeks.forEach((week, col) => {
     for (const day of week) {
@@ -130,12 +167,10 @@ function ActivityHeatmap({ dailyActivity }: { dailyActivity: DailyCount[] }) {
     }
   });
 
-  // 当前 hover 的 tooltip
   const [tooltip, setTooltip] = useState<{ date: string; count: number; x: number; y: number } | null>(null);
 
   return (
     <div className="relative overflow-x-auto">
-      {/* 月份标签行 */}
       <div className="flex mb-1" style={{ paddingLeft: 28 }}>
         {monthMarkers.map((m, i) => (
           <span
@@ -146,13 +181,10 @@ function ActivityHeatmap({ dailyActivity }: { dailyActivity: DailyCount[] }) {
             {m.label}
           </span>
         ))}
-        {/* 隐形占位让容器有高度 */}
         <span className="text-[9px] invisible">Jan</span>
       </div>
 
-      {/* 热力图主体 */}
       <div className="flex">
-        {/* 星期标签列 */}
         <div className="flex flex-col gap-[2px] mr-1.5 shrink-0" style={{ marginTop: 2 }}>
           {DAY_LABELS.map((label, i) => (
             <span key={i} className="text-[9px] text-gray-300 leading-none h-3 flex items-center">
@@ -161,7 +193,6 @@ function ActivityHeatmap({ dailyActivity }: { dailyActivity: DailyCount[] }) {
           ))}
         </div>
 
-        {/* 格子列 */}
         <div className="flex gap-[2px]">
           {weeks.map((week, col) => (
             <div key={col} className="flex flex-col gap-[2px]">
@@ -186,7 +217,6 @@ function ActivityHeatmap({ dailyActivity }: { dailyActivity: DailyCount[] }) {
         </div>
       </div>
 
-      {/* Tooltip */}
       {tooltip && (
         <div
           className="fixed z-50 pointer-events-none bg-gray-800 text-white text-[10px] px-2 py-1 rounded shadow"
@@ -195,6 +225,122 @@ function ActivityHeatmap({ dailyActivity }: { dailyActivity: DailyCount[] }) {
           {tooltip.date} · {tooltip.count} 张
         </div>
       )}
+    </div>
+  );
+}
+
+/* ---- 垂直柱状图：摄影语言分布 ---- */
+
+/** 六段摄影语言的灰度色阶（从广到长逐步加深） */
+const FOCAL_BAR_COLORS: Record<string, string> = {
+  "超广角": "bg-gray-300",
+  "广角": "bg-gray-400",
+  "标准焦段": "bg-gray-500",
+  "中长焦": "bg-gray-600",
+  "长焦": "bg-gray-700",
+  "超长焦": "bg-gray-800",
+};
+
+function VerticalBarChart({ distribution }: { distribution: FocalDist[] }) {
+  const maxPct = Math.max(...distribution.map((d) => d.percentage), 1);
+  const barMaxH = 100; // 最大柱高 px
+
+  return (
+    <div className="flex items-end justify-center gap-3" style={{ height: 160 }}>
+      {distribution.map((item) => {
+        const h = Math.max((item.percentage / maxPct) * barMaxH, item.percentage > 0 ? 4 : 0);
+        return (
+          <div key={item.range} className="flex flex-col items-center gap-1" style={{ width: 48 }}>
+            {/* 百分比 */}
+            <span className="text-[10px] text-gray-500 tabular-nums leading-none">
+              {item.percentage}%
+            </span>
+            {/* 柱体 */}
+            <div className="w-full flex flex-col justify-end" style={{ height: barMaxH }}>
+              <div
+                className={`w-full rounded-sm transition-all duration-500 ${FOCAL_BAR_COLORS[item.range]}`}
+                style={{ height: h }}
+              />
+            </div>
+            {/* 标签 */}
+            <span className="text-[9px] text-gray-400 leading-tight text-center mt-1">
+              {item.range}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---- 摄影语言演变趋势 ---- */
+
+/** 六段摄影语言在 evolution mini bar 中的灰度 */
+const EVO_COLORS: string[] = [
+  "bg-gray-300", // 超广角
+  "bg-gray-400", // 广角
+  "bg-gray-500", // 标准焦段
+  "bg-gray-600", // 中长焦
+  "bg-gray-700", // 长焦
+  "bg-gray-800", // 超长焦
+];
+
+function EvolutionTimeline({ monthly }: { monthly: MonthlyFocalDist[] }) {
+  if (!monthly || monthly.length === 0) return null;
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="flex gap-1.5" style={{ minWidth: monthly.length * 28 }}>
+        {monthly.map((m) => (
+          <div key={m.month} className="flex flex-col items-center gap-1" style={{ width: 22 }}>
+            {/* 堆叠柱 */}
+            <div className="w-full flex flex-col rounded-sm overflow-hidden" style={{ height: 56 }}>
+              {m.distribution.map((d, i) => {
+                if (d.percentage === 0) return null;
+                return (
+                  <div
+                    key={d.range}
+                    className={`w-full transition-all duration-500 ${EVO_COLORS[i]}`}
+                    style={{ height: `${d.percentage}%` }}
+                    title={`${m.label} ${d.range}: ${d.percentage}%`}
+                  />
+                );
+              })}
+            </div>
+            {/* 月份标签 */}
+            <span className="text-[8px] text-gray-400 leading-none">{m.label}</span>
+          </div>
+        ))}
+      </div>
+      {/* 图例 */}
+      <div className="flex items-center gap-2 mt-2 justify-center">
+        {["超广角", "广角", "标准", "中长焦", "长焦", "超长焦"].map((label, i) => (
+          <div key={label} className="flex items-center gap-0.5">
+            <div className={`w-2 h-2 rounded-sm ${EVO_COLORS[i]}`} />
+            <span className="text-[8px] text-gray-400">{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---- 设备占比条 ---- */
+
+function UsageBar({ value, count, total, maxCount }: { value: string; count: number; total: number; maxCount: number }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  const barPct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+  return (
+    <div className="flex items-center gap-2 text-[11px]">
+      <span className="w-36 text-gray-600 truncate shrink-0">{value}</span>
+      <span className="w-8 text-gray-400 shrink-0 tabular-nums text-right">{count}</span>
+      <div className="flex-1 h-2.5 bg-gray-100 rounded-sm overflow-hidden">
+        <div
+          className="h-full bg-gray-400 rounded-sm transition-all duration-500"
+          style={{ width: `${barPct}%` }}
+        />
+      </div>
+      <span className="w-7 text-gray-400 shrink-0 tabular-nums text-right text-[10px]">{pct}%</span>
     </div>
   );
 }
@@ -223,40 +369,37 @@ export default function StatsPanel() {
 
   if (!stats || stats.totalPhotos === 0) return null;
 
-  const topCamera = stats.cameras[0];
-  const topFocal = stats.focalLengths[0];
   const cameraMax = stats.cameras[0]?.count ?? 1;
-  const focalMax = stats.focalLengths[0]?.count ?? 1;
-
-  const lastDateStr = stats.lastPhotoDate
-    ? new Date(stats.lastPhotoDate).toLocaleDateString("zh-CN", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : null;
+  const lensMax = stats.lenses[0]?.count ?? 1;
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-white p-5 space-y-5">
-      {/* 头部：总数 */}
-      <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-light text-gray-800 tabular-nums">{stats.totalPhotos}</span>
-        <span className="text-xs text-gray-400">张照片</span>
-      </div>
+    <div className="rounded-xl border border-gray-100 bg-white p-5 space-y-6">
 
-      {/* 活跃度热力图 */}
-      {stats.dailyActivity.length > 0 && (
-        <section>
-          <div className="flex items-center gap-1.5 mb-3">
-            <span className="text-gray-300"><IconCalendar /></span>
-            <span className="text-[10px] text-gray-400 font-medium">拍摄活跃度</span>
-          </div>
+      {/* ======== Part 1: Photography Activity ======== */}
+
+      <section>
+        <div className="flex items-center gap-1.5 mb-3">
+          <span className="text-gray-300"><IconCalendar /></span>
+          <span className="text-[10px] text-gray-400 font-medium">拍摄活跃度</span>
+        </div>
+
+        {/* 计数卡片 */}
+        <div className="flex gap-2 mb-4">
+          <StatCount label="30 天" count={stats.recentCount} />
+          <StatCount label="90 天" count={stats.last90Days} />
+          <StatCount label="本年" count={stats.yearlyCount} />
+          <StatCount label="总计" count={stats.totalPhotos} />
+        </div>
+
+        {/* 热力图 */}
+        {stats.dailyActivity.length > 0 && (
           <ActivityHeatmap dailyActivity={stats.dailyActivity} />
-        </section>
-      )}
+        )}
+      </section>
 
-      {/* 相机 */}
-      {topCamera && (
+      {/* ======== Part 2: Camera Usage ======== */}
+
+      {stats.cameras.length > 0 && (
         <section>
           <div className="flex items-center gap-1.5 mb-2">
             <span className="text-gray-300"><IconCamera /></span>
@@ -264,38 +407,65 @@ export default function StatsPanel() {
           </div>
           <div className="space-y-1.5">
             {stats.cameras.slice(0, 3).map((item) => (
-              <ProportionBar key={item.value} value={item.value} count={item.count} total={stats.totalPhotos} maxWidth={cameraMax} />
+              <UsageBar
+                key={item.value}
+                value={item.value}
+                count={item.count}
+                total={stats.totalPhotos}
+                maxCount={cameraMax}
+              />
             ))}
           </div>
         </section>
       )}
 
-      {/* 焦段 */}
-      {topFocal && (
+      {/* ======== Part 3: Lens Usage ======== */}
+
+      {stats.lenses.length > 0 && (
         <section>
           <div className="flex items-center gap-1.5 mb-2">
-            <span className="text-gray-300"><IconFocal /></span>
-            <span className="text-[10px] text-gray-400 font-medium">焦段</span>
+            <span className="text-gray-300"><IconLens /></span>
+            <span className="text-[10px] text-gray-400 font-medium">镜头</span>
           </div>
           <div className="space-y-1.5">
-            {stats.focalLengths.slice(0, 5).map((item) => (
-              <ProportionBar key={item.value} value={item.value} count={item.count} total={stats.totalPhotos} maxWidth={focalMax} />
+            {stats.lenses.slice(0, 5).map((item) => (
+              <UsageBar
+                key={item.value}
+                value={item.value}
+                count={item.count}
+                total={stats.totalPhotos}
+                maxCount={lensMax}
+              />
             ))}
           </div>
         </section>
       )}
 
-      {/* 最近拍摄状态 */}
-      <section className="flex items-center gap-3 pt-1 border-t border-gray-50">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-gray-400">最近</span>
-          <span className="text-[11px] text-gray-600">{lastDateStr || "—"}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-gray-400">30 天</span>
-          <span className="text-[11px] text-gray-600 tabular-nums">{stats.recentCount} 张</span>
-        </div>
-      </section>
+      {/* ======== Part 4: Photography Language Distribution ======== */}
+
+      {stats.focalDistribution.length > 0 && (
+        <section>
+          <div className="flex items-center gap-1.5 mb-3">
+            <span className="text-gray-300"><IconFocal /></span>
+            <span className="text-[10px] text-gray-400 font-medium">摄影语言分布</span>
+            <span className="text-[9px] text-gray-300">35mm 等效</span>
+          </div>
+          <VerticalBarChart distribution={stats.focalDistribution} />
+        </section>
+      )}
+
+      {/* ======== Part 5: Photography Evolution ======== */}
+
+      {stats.monthlyFocalDistribution && stats.monthlyFocalDistribution.length > 0 && (
+        <section>
+          <div className="flex items-center gap-1.5 mb-3">
+            <span className="text-gray-300"><IconTrend /></span>
+            <span className="text-[10px] text-gray-400 font-medium">摄影语言演变</span>
+            <span className="text-[9px] text-gray-300">过去 12 个月</span>
+          </div>
+          <EvolutionTimeline monthly={stats.monthlyFocalDistribution} />
+        </section>
+      )}
     </div>
   );
 }
