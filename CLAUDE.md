@@ -7,15 +7,19 @@
 
 ## Documentation Hierarchy
 
-本项目有三层文档系统，各司其职：
+本项目有四层文档系统，各司其职：
 
 | 层 | 文件 | 读者 | 内容 |
 |---|------|------|------|
-| 1 | `README.md` | 人类开发者 | 项目概览、技术栈、功能列表、数据流、API 表、数据库结构、启动说明 |
-| 2 | `CLAUDE.md` | AI Agent | 架构规则、UI Philosophy、Bug 教训、Export 规则、开发约束、Change Log |
-| 3 | `~/.claude/projects/.../memory/` | 跨会话持久化 | 用户偏好、项目方向、反馈记录、外部参考 |
+| 1 | `USER_GUIDE.md` | 摄影师用户 | 产品简介、使用方法、功能介绍、常见问题 |
+| 2 | `CHANGELOG.md` | 用户 | 用户可见功能变化（不含代码细节） |
+| 3 | `README.md` | 人类开发者 | 项目概览、技术栈、功能列表、数据流、API 表、数据库结构、启动说明 |
+| 4 | `CLAUDE.md` | AI Agent | 架构规则、UI Philosophy、Bug 教训、Export 规则、开发约束、Change Log |
+| 5 | `~/.claude/projects/.../memory/` | 跨会话持久化 | 用户偏好、项目方向、反馈记录、外部参考 |
 
 **规则：**
+- USER_GUIDE 面向摄影师，用自然语言，禁止技术术语（Next.js / SQLite / API / Schema）
+- CHANGELOG 只记录用户可见变化，不记录代码修改（如"新增摄影语言分布"而非"新增 VerticalBarChart 组件"）
 - README 不写 Bug 教训、Agent 规则、UI 禁止事项、AI Memory、Prompt 规范
 - CLAUDE.md 允许非常长 — 它是 AI IDE Context，不是给人读的
 - memory/ 存跨会话持久化偏好，CLAUDE.md 存项目级开发规则
@@ -445,6 +449,8 @@ base64 data URL → BookDocument Page → PDF embed
 - 底部标注"规则引擎生成 · 非 AI"，诚实透明
 
 ## Change Log
+
+> 用户可见变化请参阅 [CHANGELOG.md](CHANGELOG.md)。本 Change Log 包含架构细节，面向 AI Agent。
 
 ### 2026-06-16
 

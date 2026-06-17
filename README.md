@@ -2,7 +2,7 @@
 
 本地摄影照片管理工具 — 上传、EXIF 解析、瀑布流浏览、摄影集管理、摄影书 PDF 导出。
 
-> 面向人类开发者的项目文档。AI Agent 开发规则请参阅 [CLAUDE.md](CLAUDE.md)。
+> 本文档面向开发者。使用说明请参阅 [USER_GUIDE.md](USER_GUIDE.md)；更新日志请参阅 [CHANGELOG.md](CHANGELOG.md)；AI Agent 开发规则请参阅 [CLAUDE.md](CLAUDE.md)。
 
 ---
 ## 预览
