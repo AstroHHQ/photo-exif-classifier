@@ -380,6 +380,12 @@ export default function CollectionDetailPage() {
               >
                 导出 PDF
               </a>
+              <a
+                href={`/api/collections/${id}/export/md`}
+                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                导出 Markdown
+              </a>
               <button
                 onClick={() => handleChangeStatus("ready")}
                 disabled={updating}
