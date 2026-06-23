@@ -452,6 +452,26 @@ base64 data URL → BookDocument Page → PDF embed
 
 > 用户可见变化请参阅 [CHANGELOG.md](CHANGELOG.md)。本 Change Log 包含架构细节，面向 AI Agent。
 
+### 2026-06-23
+
+#### Feature
+- Markdown Export — Book Source Format，摄影集导出为可编辑源文件（zip：book.md + images/）
+- Batch Add To Collection — 首页多选照片批量加入摄影集，共用同一个 Selection Mode
+- 文档体系扩展 — 新增 USER_GUIDE.md（用户说明书）和 CHANGELOG.md（用户可见变化日志）
+
+#### Architecture
+- `lib/export/markdown.ts` — 从 BookDocument 生成 markdown 内容，内容层 vs 版式层分离
+- `getExportImageMap()` — 输出文件名（001.jpg）与源文件映射，供 API 层复制图片
+- Markdown Export 不经过 `resolveBookImages()` — 直接复制原文件，不需要 base64 优化
+- `GET /api/collections/[id]/export/md` — zip 流式导出，使用 adm-zip
+- `PATCH /api/photos/batch` — 新增 handler，Body: `{ photo_ids, collection_id }`
+- `batchAddToCollection()` — 事务内批量执行 updatePhotoCollectionId，自动 sort_order + 封面
+- PhotoGrid 批量工具栏统一 — 加入摄影集 / 删除 / 取消 三个操作共用一个选择模式
+- `batchAddCollections` prop — 仅传入 draft/ready 集合（`?editable=1`），published 被排除
+- Published toolbar 新增「导出 Markdown」按钮，排在「导出 PDF」之后
+- 文档层级从三层扩展为四层：USER_GUIDE / CHANGELOG / README / CLAUDE
+- CLAUDE.md Change Log 新增指向 CHANGELOG.md 的说明
+
 ### 2026-06-16
 
 #### Feature

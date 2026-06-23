@@ -3,7 +3,7 @@
 /**
  * PhotoGrid —— 照片瀑布流。
  *
- * CSS columns 布局。支持多选模式和批量操作。
+ * CSS columns 布局。支持多选模式和批量操作（删除 + 加入摄影集）。
  */
 
 import { useEffect, useState, useCallback } from "react";
@@ -30,6 +30,10 @@ interface Props {
   onBatchDelete?: () => void;
   /** 批量操作标签（如"移出摄影集"） */
   batchActionLabel?: string;
+  /** 批量加入摄影集 */
+  onBatchAddToCollection?: (collectionId: number) => void;
+  /** 可选摄影集列表（仅 draft / ready） */
+  batchAddCollections?: { id: number; title: string }[];
 }
 
 export default function PhotoGrid({
@@ -39,9 +43,12 @@ export default function PhotoGrid({
   onDelete, collections, onImportToCollection,
   selectable, selectedIds, onSelectionChange,
   onBatchDelete, batchActionLabel,
+  onBatchAddToCollection, batchAddCollections,
 }: Props) {
   const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [loading, setLoading] = useState(!externalPhotos);
+  const [showBatchImport, setShowBatchImport] = useState(false);
+  const [batchCollectionId, setBatchCollectionId] = useState<number | null>(null);
 
   useEffect(() => {
     if (externalPhotos) {
@@ -98,30 +105,82 @@ export default function PhotoGrid({
     <div>
       {/* 批量操作工具栏 */}
       {selectable && selectedCount > 0 && (
-        <div className="flex items-center gap-3 mb-4 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50">
-          <span className="text-[11px] text-gray-600">
-            已选 <span className="font-medium text-gray-800">{selectedCount}</span> 张
-          </span>
-          <button
-            onClick={allSelected ? deselectAll : selectAll}
-            className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            {allSelected ? "取消全选" : "全选"}
-          </button>
-          {onBatchDelete && (
+        <div className="mb-4 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-gray-600">
+              已选择 <span className="font-medium text-gray-800">{selectedCount}</span> 张
+            </span>
             <button
-              onClick={onBatchDelete}
-              className="text-[10px] px-2.5 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
+              onClick={allSelected ? deselectAll : selectAll}
+              className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
             >
-              {batchActionLabel || "删除选中照片"}
+              {allSelected ? "取消全选" : "全选"}
             </button>
-          )}
-          <button
-            onClick={deselectAll}
-            className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors ml-auto"
-          >
-            取消选择
-          </button>
+
+            {/* 批量加入摄影集 */}
+            {onBatchAddToCollection && batchAddCollections && batchAddCollections.length > 0 && (
+              showBatchImport ? (
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={batchCollectionId ?? ""}
+                    onChange={(e) => setBatchCollectionId(Number(e.target.value))}
+                    className="text-[10px] border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-600"
+                  >
+                    <option value="" disabled>选择摄影集</option>
+                    {batchAddCollections.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title || "未命名摄影集"}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => {
+                      if (batchCollectionId != null) {
+                        onBatchAddToCollection(batchCollectionId);
+                        setShowBatchImport(false);
+                        setBatchCollectionId(null);
+                      }
+                    }}
+                    disabled={batchCollectionId == null}
+                    className="text-[10px] px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-30 disabled:cursor-default transition-colors"
+                  >
+                    确认
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowBatchImport(false);
+                      setBatchCollectionId(null);
+                    }}
+                    className="text-[10px] px-2 py-1 rounded text-gray-400 hover:text-gray-500 transition-colors"
+                  >
+                    取消
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowBatchImport(true)}
+                  className="text-[10px] px-2.5 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                >
+                  加入摄影集
+                </button>
+              )
+            )}
+
+            {onBatchDelete && (
+              <button
+                onClick={onBatchDelete}
+                className="text-[10px] px-2.5 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
+              >
+                {batchActionLabel || "删除选中照片"}
+              </button>
+            )}
+            <button
+              onClick={deselectAll}
+              className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors ml-auto"
+            >
+              取消选择
+            </button>
+          </div>
         </div>
       )}
 

@@ -516,6 +516,57 @@ export function updatePhotoCollectionId(
 }
 
 /**
+ * 批量将照片导入摄影集。
+ * - 事务内批量执行 updatePhotoCollectionId
+ * - 自动排序 + 自动封面
+ * - 返回成功导入数
+ */
+export function batchAddToCollection(
+  photoIds: number[],
+  collectionId: number
+): number {
+  const d = getDb();
+  let count = 0;
+
+  // 获取目标摄影集当前最大 sort_order
+  const maxSort = d
+    .prepare("SELECT MAX(sort_order) as max_sort FROM photos WHERE collection_id = ?")
+    .get(collectionId) as { max_sort: number | null };
+  let nextSort = (maxSort.max_sort ?? -1) + 1;
+
+  // 检查是否需要自动封面
+  const collection = getCollectionById(collectionId);
+  const needCover = collection != null && collection.cover_photo_id == null;
+  let firstPhotoId: number | null = null;
+
+  const batch = d.transaction((ids: number[]) => {
+    for (const photoId of ids) {
+      const photo = getPhotoById(photoId);
+      if (!photo) continue;
+
+      d.prepare(
+        "UPDATE photos SET collection_id = ?, sort_order = ? WHERE id = ?"
+      ).run(collectionId, nextSort, photoId);
+
+      if (firstPhotoId === null) firstPhotoId = photoId;
+      nextSort++;
+      count++;
+    }
+
+    // 自动封面
+    if (needCover && firstPhotoId != null) {
+      d.prepare("UPDATE collections SET cover_photo_id = ? WHERE id = ?").run(
+        firstPhotoId,
+        collectionId
+      );
+    }
+  });
+
+  batch(photoIds);
+  return count;
+}
+
+/**
  * 获取摄影集编辑进度。
  * 进度 = (已备注数 + 已排序数) / (总照片数 × 2)
  * 已排序 = sort_order IS NOT NULL 的照片数量。

@@ -270,6 +270,31 @@ export default function PhotoContainer() {
     }
   }, [selectedIds, allPhotos]);
 
+  // 批量加入摄影集
+  const handleBatchAddToCollection = useCallback(
+    async (collectionId: number) => {
+      try {
+        const res = await fetch("/api/photos/batch", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            photo_ids: Array.from(selectedIds),
+            collection_id: collectionId,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setAllPhotos((prev) => prev.filter((p) => !selectedIds.has(p.id)));
+          setSelectedIds(new Set());
+          setSelectionMode(false);
+        }
+      } catch (err) {
+        console.error("批量导入失败:", err);
+      }
+    },
+    [selectedIds]
+  );
+
   // 导入照片到摄影集
   const handleImportToCollection = useCallback(
     async (photoId: number, collectionId: number) => {
@@ -341,6 +366,8 @@ export default function PhotoContainer() {
           onSelectionChange={setSelectedIds}
           onBatchDelete={handleBatchDelete}
           batchActionLabel="删除选中照片"
+          onBatchAddToCollection={handleBatchAddToCollection}
+          batchAddCollections={collections}
         />
       </div>
 

@@ -1,17 +1,43 @@
 /**
- * 批量删除/移出照片 —— DELETE /api/photos/batch
+ * 批量操作照片 —— /api/photos/batch
  *
- * Body: { photo_ids: number[], context?: "library" | "collection" }
+ * DELETE: 批量删除/移出照片
+ *   Body: { photo_ids: number[], context?: "library" | "collection" }
  *
- * - context = "library"（默认）：根据 storage_mode 决定是否删除文件。
- *   copied → 删文件 + 数据库记录；referenced → 仅删数据库记录。
- * - context = "collection"：仅移出摄影集（collection_id → NULL），不删除。
+ * PATCH: 批量加入摄影集
+ *   Body: { photo_ids: number[], collection_id: number }
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { batchDeletePhotos, batchRemoveFromCollection } from "@/lib/db";
+import { batchDeletePhotos, batchRemoveFromCollection, batchAddToCollection } from "@/lib/db";
 import fs from "fs/promises";
 import path from "path";
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const photoIds: number[] = body.photo_ids;
+    const collectionId: number = body.collection_id;
+
+    if (!Array.isArray(photoIds) || photoIds.length === 0) {
+      return NextResponse.json({ error: "请提供 photo_ids 数组" }, { status: 400 });
+    }
+    if (collectionId == null) {
+      return NextResponse.json({ error: "请提供 collection_id" }, { status: 400 });
+    }
+
+    const count = batchAddToCollection(photoIds, collectionId);
+
+    return NextResponse.json({
+      success: true,
+      imported: count,
+      collection_id: collectionId,
+    });
+  } catch (error) {
+    console.error("Batch add to collection error:", error);
+    return NextResponse.json({ error: "批量操作失败" }, { status: 500 });
+  }
+}
 
 export async function DELETE(request: NextRequest) {
   try {
