@@ -452,6 +452,69 @@ base64 data URL → BookDocument Page → PDF embed
 
 > 用户可见变化请参阅 [CHANGELOG.md](CHANGELOG.md)。本 Change Log 包含架构细节，面向 AI Agent。
 
+### 2026-06-24
+
+#### Feature
+- Collection Management V1 — 修改名称（内联编辑）、批量移除照片、删除摄影集
+- 摄影集标题内联编辑 — 铅笔图标 → Enter 保存 / Esc 取消
+- 摄影集内批量移除照片 — 复用首页 Selection Mode，照片回到瀑布流
+- 删除摄影集 — 确认对话框 → 解除所有照片关联 → 删除记录
+
+#### Architecture
+- `lib/db.ts` — 新增 `deleteCollection()`，事务内批量解除关联 + 删除 collection 记录
+- `DELETE /api/collections/[id]` — 新增 handler，调用 `deleteCollection()`
+- `app/collections/[id]/page.tsx` — 新增 `editingTitle`/`titleDraft` 状态 + `handleSaveTitle` + `handleDeleteCollection`
+- Header 区域新增铅笔编辑按钮和「删除摄影集」按钮
+- 删除行为规则：不删照片文件、不删照片记录、不删已导出文件（用户本地文件，系统不追踪）
+- 批量移除复用 `DELETE /api/photos/batch` (context: collection)，无需新增接口
+- README 新增「Collection Management」章节 + API 表新增 DELETE
+
+#### Feature
+- Collection Chapters MVP — 章节标签系统，轻量级内容组织，与照片按 sort_order 交织
+- 摄影集内新增章节 — 内联输入框 + pill tag 展示 + × 删除
+- PDF/Markdown 导出时章节标题出现在照片之间，作为内容结构的一部分
+
+#### Architecture
+- `collection_chapters` 表 — 独立存储章节（id, collection_id, title, sort_order）
+- `CollectionChapter` 接口 + `createCollectionChapter()` / `getCollectionChapters()` / `deleteCollectionChapter()`
+- `POST/DELETE /api/collections/[id]/chapters` — 章节 CRUD API
+- `buildBookDocument()` 签名扩展 — 接受可选 `chapters` 参数，构建统一 Item 数组按 sort_order 排序
+- `lib/export/types.ts` — PageType 扩展 `"chapter"`
+- `lib/export/pdf.tsx` — 新增 ChapterPage 组件（居中标题空白页）
+- `lib/export/markdown.ts` — 章节渲染为 `## Chapter Title`
+- 两个导出 API route 均传递 chapters 到 buildBookDocument()
+- UI 采用 pragmatic MVP 方案 — 章节 pill tag 在 PhotoGrid 上方，不嵌入 CSS columns 瀑布流
+- 章节是内容结构而非布局结构 — 未来可扩展排版层，当前聚焦内容组织
+- README 新增「Collection Chapters」章节 + API 表新增章节端点
+
+#### Bug Fix
+- **空状态入口封锁** — 删除所有摄影集后，`collections.length > 0` 条件封锁 PhotoCard "+" 按钮和 PhotoGrid 批量 "加入摄影集" 按钮，用户无法为已有照片创建摄影集。修复：移除 `length > 0` 条件，空列表时显示"暂无摄影集 [创建摄影集] [取消]"
+- **创建摄影集按钮无响应** — 按钮发送 `{ title: "" }`，API 验证 `!title.trim()` 返回 400，`try/catch` 静默吞错。修复：默认标题改为 `"未命名摄影集"`
+- **导航栏双击** — `layout.tsx` 使用 `<a>` 触发全页硬导航，dev HMR 竞争导致首次点击被吞。修复：改用 `next/link` `<Link>`
+
+### 2026-06-26
+
+#### Feature
+- Move To Chapter — 批量将照片移动到目标章节之后
+- Export Image Naming Policy — 导出图片统一命名
+- Chapter Navigation + Focus Mode — 章节导航栏 + 单章节专注编辑
+
+#### Architecture
+- `lib/db.ts` — 新增 `movePhotoToChapter()`，通过 sort_order 区间计算将照片放在目标章节之后。不建立 chapter_id 归属——仅重排序
+- `PATCH /api/photos/[id]/move-to-chapter` — 新增单张移动 API
+- `PATCH /api/photos/batch` — 扩展支持 `move_to_chapter_id` 批量移动
+- PhotoGrid 选择工具栏新增「移动到章节」按钮（灰底黑字，与蓝色导入按钮区分）
+- 算法：找到目标章节与下一章节之间的 sort_order 区间 → 区间内 MAX(sort_order) + 0.001（微小增量防溢出）。`movePhotoToChapter` 已修复两次：+1 → COUNT → MAX+0.001
+- `lib/export/types.ts` — Page 类型新增 `originalName` 字段
+- `lib/export/schema.ts` — buildBookDocument 为封面和照片页填充 originalName（来自 photo.original_name）
+- `lib/export/markdown.ts` — 导出图片命名改为 `{title}_v{version}_{pageIndex:03d}_{originalName}{ext}`，保留原始扩展名不转换
+- 非法字符 `/ \ : * ? " < > |` 替换为 `-`，空格保留
+- 封面页也填充 photoId 和 originalName（之前缺失）
+- `app/collections/[id]/page.tsx` — Chapter Navigation：pill 按钮栏（全部 + 每章节照片计数）、Focus Mode（过滤照片 + 返回横幅）、双击检测进入 Focus、封面按钮在 Focus Mode 隐藏
+- 章节照片统计：sort_order 区间 `[ch.sort_order, nextCh.sort_order)`，NULL 不归入任何章节
+- PhotoGrid/PhotoModal 在 Focus Mode 使用 filtered `displayedPhotos`
+- README 新增「Export Image Naming Policy」+「Chapter Navigation」章节
+
 ### 2026-06-23
 
 #### Feature

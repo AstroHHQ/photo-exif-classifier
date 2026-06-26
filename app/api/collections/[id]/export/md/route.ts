@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCollectionById, getCollectionPhotos } from "@/lib/db";
+import { getCollectionById, getCollectionPhotos, getCollectionChapters } from "@/lib/db";
 import { buildBookDocument } from "@/lib/export/schema";
 import { buildMarkdownContent, getExportImageMap } from "@/lib/export/markdown";
 import AdmZip from "adm-zip";
@@ -32,12 +32,13 @@ export async function GET(
   }
 
   const photos = getCollectionPhotos(collectionId);
+  const chapters = getCollectionChapters(collectionId);
   if (photos.length === 0) {
     return NextResponse.json({ error: "摄影集中没有照片" }, { status: 400 });
   }
 
   // 构建 BookDocument
-  const bookDoc = buildBookDocument(collection, photos);
+  const bookDoc = buildBookDocument(collection, photos, chapters);
 
   // 生成 markdown 内容
   const markdown = buildMarkdownContent(bookDoc);

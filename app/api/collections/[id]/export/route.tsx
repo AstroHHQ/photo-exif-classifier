@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCollectionById, getCollectionPhotos } from "@/lib/db";
+import { getCollectionById, getCollectionPhotos, getCollectionChapters } from "@/lib/db";
 import { buildBookDocument, resolveBookImages } from "@/lib/export/schema";
 import { PhotoBook } from "@/lib/export/pdf";
 import { renderToBuffer } from "@react-pdf/renderer";
@@ -31,12 +31,13 @@ export async function GET(
   }
 
   const photos = getCollectionPhotos(collectionId);
+  const chapters = getCollectionChapters(collectionId);
   if (photos.length === 0) {
     return NextResponse.json({ error: "摄影集中没有照片" }, { status: 400 });
   }
 
   // 构建 BookDocument
-  const bookDoc = buildBookDocument(collection, photos);
+  const bookDoc = buildBookDocument(collection, photos, chapters);
 
   // 加载图片 + 导出尺寸优化
   const { document: resolved, imageStats } = await resolveBookImages(bookDoc);

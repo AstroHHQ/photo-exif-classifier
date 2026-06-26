@@ -158,6 +158,20 @@ function ImageWithCaptionPage({ page, ratio }: { page: import("./types").Page; r
   );
 }
 
+/* ---- 章节标题页 ---- */
+
+function ChapterPage({ page, ratio }: { page: import("./types").Page; ratio: string }) {
+  const styles = buildStyles(ratio);
+
+  return (
+    <Page size={pageDimensions(ratio)} style={styles.page}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <Text style={styles.coverTitle}>{page.title || ""}</Text>
+      </View>
+    </Page>
+  );
+}
+
 /* ---- Full-bleed 页（无 caption，照片铺满） ---- */
 
 function FullBleedPage({ page, ratio }: { page: import("./types").Page; ratio: string }) {
@@ -187,6 +201,8 @@ export function PhotoBook({ document: doc }: PhotoBookProps) {
         switch (page.type) {
           case "cover":
             return <CoverPage key={i} page={page} ratio={ratio} />;
+          case "chapter":
+            return <ChapterPage key={i} page={page} ratio={ratio} />;
           case "full-bleed":
             return <FullBleedPage key={i} page={page} ratio={ratio} />;
           case "image-with-caption":

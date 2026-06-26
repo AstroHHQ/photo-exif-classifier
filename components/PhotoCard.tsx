@@ -83,7 +83,7 @@ export default function PhotoCard({
     .join(" · ");
 
   const hasHoverActions =
-    (collections !== undefined && photo.collection_id == null && collections.length > 0) ||
+    (collections !== undefined && photo.collection_id == null) ||
     onDelete;
 
   return (
@@ -167,8 +167,7 @@ export default function PhotoCard({
             "
           >
             {collections !== undefined &&
-              photo.collection_id == null &&
-              collections.length > 0 && (
+              photo.collection_id == null && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -204,9 +203,40 @@ export default function PhotoCard({
         showImport && (
           <div className="px-3 py-2.5 border-t border-gray-50">
             {collections.length === 0 ? (
-              <span className="text-[10px] text-gray-300">
-                暂无可编辑摄影集
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400">暂无摄影集</span>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      const res = await fetch("/api/collections", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ title: "未命名摄影集" }),
+                      });
+                      if (res.ok) {
+                        const col = await res.json();
+                        onImportToCollection?.(photo.id, col.id);
+                        setShowImport(false);
+                      }
+                    } catch {
+                      // silently fail
+                    }
+                  }}
+                  className="text-[10px] px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors shrink-0"
+                >
+                  创建摄影集
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowImport(false);
+                  }}
+                  className="text-[10px] px-2 py-1 rounded text-gray-400 hover:text-gray-500 transition-colors shrink-0"
+                >
+                  取消
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-1.5">
                 <select

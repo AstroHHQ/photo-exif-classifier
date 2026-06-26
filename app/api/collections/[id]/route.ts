@@ -1,12 +1,14 @@
 /**
- * 单个摄影集接口 —— GET / PATCH /api/collections/[id]
+ * 单个摄影集接口 —— GET / PATCH / DELETE /api/collections/[id]
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import {
   getCollectionById,
   getCollectionPhotos,
+  getCollectionChapters,
   updateCollection,
+  deleteCollection,
 } from "@/lib/db";
 
 /** 获取单个摄影集详情（含照片列表） */
@@ -26,6 +28,7 @@ export async function GET(
   }
 
   const photos = getCollectionPhotos(collectionId);
+  const chapters = getCollectionChapters(collectionId);
 
   // 自动检测 ready：draft 状态下，全部备注或全部排序 → 自动升为 ready
   if (collection.status === "draft" && photos.length > 0) {
@@ -38,7 +41,7 @@ export async function GET(
     }
   }
 
-  return NextResponse.json({ ...collection, photos });
+  return NextResponse.json({ ...collection, photos, chapters });
 }
 
 /** 更新摄影集 */
@@ -72,4 +75,23 @@ export async function PATCH(
     console.error("Update collection error:", error);
     return NextResponse.json({ error: "更新摄影集失败" }, { status: 500 });
   }
+}
+
+/** 删除摄影集（解除照片关联，不删除照片文件和记录） */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const collectionId = parseInt(id, 10);
+  if (isNaN(collectionId)) {
+    return NextResponse.json({ error: "无效的摄影集 ID" }, { status: 400 });
+  }
+
+  const ok = deleteCollection(collectionId);
+  if (!ok) {
+    return NextResponse.json({ error: "摄影集不存在" }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true });
 }

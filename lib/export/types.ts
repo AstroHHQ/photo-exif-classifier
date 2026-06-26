@@ -6,15 +6,17 @@
  */
 
 /** 页面类型 */
-export type PageType = "cover" | "full-bleed" | "image-with-caption" | "spread";
+export type PageType = "cover" | "chapter" | "full-bleed" | "image-with-caption" | "spread";
 
 /** 单页定义 */
 export interface Page {
   type: PageType;
   /** 该页对应的 photo id（封面和空白页可为空） */
   photoId?: number;
-  /** 照片文件在 uploads/ 下的 filename，用于加载图片 */
+  /** 照片文件在 uploads/ 下的 filename（UUID），用于加载图片 */
   imageFilename?: string;
+  /** 用户上传时的原始文件名，用于导出命名 */
+  originalName?: string;
   /** 照片上方标题（如封面标题） */
   title?: string;
   /** 照片下方说明文字（来自 photo.note） */

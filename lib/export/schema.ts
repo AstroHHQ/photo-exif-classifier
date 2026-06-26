@@ -7,7 +7,7 @@
 
 import { readFileSync } from "fs";
 import path from "path";
-import type { Collection, Photo } from "@/lib/db";
+import type { Collection, Photo, CollectionChapter } from "@/lib/db";
 import type { BookDocument, Page } from "./types";
 import { optimizeExportImage, type ImageOptimizationStats } from "./image";
 
@@ -18,24 +18,28 @@ function loadFileBuffer(filename: string): Buffer {
 }
 
 /**
- * 从 Collection 和照片列表构建 BookDocument。
+ * 从 Collection + Photos + Chapters 构建 BookDocument。
+ * 章节和照片按 sort_order 交叉排列。
  */
 export function buildBookDocument(
   collection: Collection,
-  photos: Photo[]
+  photos: Photo[],
+  chapters?: CollectionChapter[]
 ): BookDocument {
   const pages: Page[] = [];
 
   // 封面页
+  const coverPhoto = collection.cover_photo_id != null
+    ? photos.find(p => p.id === collection.cover_photo_id)
+    : photos[0];
   pages.push({
     type: "cover",
     pageNumber: 1,
     title: collection.title || "Untitled",
     caption: `v${collection.version}`,
-    // 如果有封面照片，用作封面图
-    imageFilename: collection.cover_photo_id != null
-      ? photos.find(p => p.id === collection.cover_photo_id)?.filename
-      : photos[0]?.filename,
+    imageFilename: coverPhoto?.filename,
+    originalName: coverPhoto?.original_name,
+    photoId: coverPhoto?.id,
   });
 
   // 照片页（按 sort_order 排序）
@@ -45,14 +49,45 @@ export function buildBookDocument(
     return ao - bo;
   });
 
-  for (const photo of sortedPhotos) {
-    pages.push({
-      type: "image-with-caption",
-      photoId: photo.id,
-      imageFilename: photo.filename,
-      caption: photo.note || undefined,
-      pageNumber: pages.length + 1,
-    });
+  // 章节列表（按 sort_order 排序）
+  const sortedChapters = [...(chapters || [])].sort((a, b) => a.sort_order - b.sort_order);
+
+  // 构建统一条目列表（章节 + 照片），按 sort_order 交叉排列
+  interface Item {
+    type: "chapter" | "photo";
+    sortOrder: number;
+    chapter?: CollectionChapter;
+    photo?: Photo;
+  }
+
+  const items: Item[] = [];
+
+  for (const ch of sortedChapters) {
+    items.push({ type: "chapter", sortOrder: ch.sort_order, chapter: ch });
+  }
+  for (const ph of sortedPhotos) {
+    items.push({ type: "photo", sortOrder: ph.sort_order ?? 9999, photo: ph });
+  }
+
+  items.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  for (const item of items) {
+    if (item.type === "chapter" && item.chapter) {
+      pages.push({
+        type: "chapter",
+        title: item.chapter.title,
+        pageNumber: pages.length + 1,
+      });
+    } else if (item.type === "photo" && item.photo) {
+      pages.push({
+        type: "image-with-caption",
+        photoId: item.photo.id,
+        imageFilename: item.photo.filename,
+        originalName: item.photo.original_name,
+        caption: item.photo.note || undefined,
+        pageNumber: pages.length + 1,
+      });
+    }
   }
 
   return {

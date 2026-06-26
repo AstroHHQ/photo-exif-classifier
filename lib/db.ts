@@ -98,6 +98,18 @@ function initTables(db: Database.Database) {
   try {
     db.exec(`ALTER TABLE photos ADD COLUMN original_path TEXT`);
   } catch { /* 列已存在，忽略 */ }
+
+  // 摄影集章节表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS collection_chapters (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      collection_id   INTEGER NOT NULL,
+      title           TEXT NOT NULL DEFAULT '',
+      sort_order      REAL NOT NULL DEFAULT 0,
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE
+    );
+  `);
 }
 
 /** 照片记录的类型定义 */
@@ -122,6 +134,15 @@ export interface Photo {
   created_at: string;
   /** referenced 模式存储原始文件路径，copied 模式为 null */
   original_path: string | null;
+}
+
+/** 摄影集章节记录的类型定义 */
+export interface CollectionChapter {
+  id: number;
+  collection_id: number;
+  title: string;
+  sort_order: number;
+  created_at: string;
 }
 
 /** 摄影集记录的类型定义 */
@@ -229,6 +250,104 @@ export function getCollectionPhotos(collectionId: number): Photo[] {
     .all(collectionId) as Photo[];
 }
 
+// ---- Collection Chapter（章节）操作 ----
+
+/**
+ * 获取摄影集下所有章节，按 sort_order 排序。
+ */
+export function getCollectionChapters(collectionId: number): CollectionChapter[] {
+  const d = getDb();
+  return d
+    .prepare("SELECT * FROM collection_chapters WHERE collection_id = ? ORDER BY sort_order ASC, id ASC")
+    .all(collectionId) as CollectionChapter[];
+}
+
+/**
+ * 创建章节。
+ * sort_order 自动追加到末尾。
+ */
+export function createCollectionChapter(
+  collectionId: number,
+  title: string
+): CollectionChapter {
+  const d = getDb();
+  const maxSort = d
+    .prepare("SELECT MAX(sort_order) as max_sort FROM collection_chapters WHERE collection_id = ?")
+    .get(collectionId) as { max_sort: number | null };
+  const nextSort = (maxSort.max_sort ?? -1) + 1;
+
+  const result = d.prepare(
+    "INSERT INTO collection_chapters (collection_id, title, sort_order) VALUES (?, ?, ?)"
+  ).run(collectionId, title, nextSort);
+
+  return {
+    id: Number(result.lastInsertRowid),
+    collection_id: collectionId,
+    title,
+    sort_order: nextSort,
+    created_at: new Date().toISOString(),
+  };
+}
+
+/**
+ * 删除章节。
+ */
+export function deleteCollectionChapter(id: number): boolean {
+  const d = getDb();
+  const result = d.prepare("DELETE FROM collection_chapters WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+/**
+ * 将照片移动到目标章节之后（通过调整 sort_order）。
+ *
+ * 算法：找到目标章节与下一章节之间的 sort_order 区间，
+ * 将照片的 sort_order 设为区间内最大 sort_order + 0.001（微小增量，不溢出到下一章节）。
+ */
+export function movePhotoToChapter(
+  photoId: number,
+  chapterId: number,
+  collectionId: number
+): Photo | null {
+  const d = getDb();
+
+  // 获取目标章节
+  const chapter = d.prepare(
+    "SELECT * FROM collection_chapters WHERE id = ? AND collection_id = ?"
+  ).get(chapterId, collectionId) as CollectionChapter | undefined;
+  if (!chapter) return null;
+
+  // 获取下一章节的 sort_order（作为区间上界）
+  const nextChapter = d.prepare(
+    "SELECT MIN(sort_order) as next_sort FROM collection_chapters WHERE collection_id = ? AND sort_order > ?"
+  ).get(collectionId, chapter.sort_order) as { next_sort: number | null };
+
+  const upperBound = nextChapter.next_sort;
+
+  // 获取该区间内已有照片的最大 sort_order
+  let maxPhotoSort: number | null = null;
+  if (upperBound !== null) {
+    const row = d.prepare(
+      "SELECT MAX(sort_order) as max_sort FROM photos WHERE collection_id = ? AND sort_order >= ? AND sort_order < ?"
+    ).get(collectionId, chapter.sort_order, upperBound) as { max_sort: number | null };
+    maxPhotoSort = row.max_sort;
+  } else {
+    const row = d.prepare(
+      "SELECT MAX(sort_order) as max_sort FROM photos WHERE collection_id = ? AND sort_order >= ?"
+    ).get(collectionId, chapter.sort_order) as { max_sort: number | null };
+    maxPhotoSort = row.max_sort;
+  }
+
+  const newSort = maxPhotoSort != null
+    ? maxPhotoSort + 0.001
+    : chapter.sort_order + 0.001;
+
+  d.prepare("UPDATE photos SET sort_order = ? WHERE id = ? AND collection_id = ?")
+    .run(newSort, photoId, collectionId);
+
+  return d.prepare("SELECT * FROM photos WHERE id = ?").get(photoId) as Photo | undefined ?? null;
+}
+
 /**
  * 更新摄影集信息。
  */
@@ -283,6 +402,31 @@ export function updateCollection(
     values
   );
   return getCollectionById(id);
+}
+
+/**
+ * 删除摄影集。
+ * - 将该摄影集下所有照片的 collection_id 置 NULL（回到首页瀑布流）
+ * - 清除引用该照片为封面的 cover_photo_id
+ * - 删除 collection 记录
+ * - 不删除任何照片文件和数据库照片记录
+ */
+export function deleteCollection(id: number): boolean {
+  const d = getDb();
+  const collection = getCollectionById(id);
+  if (!collection) return false;
+
+  const batch = d.transaction(() => {
+    // 清除封面引用
+    d.prepare("UPDATE collections SET cover_photo_id = NULL WHERE cover_photo_id IN (SELECT id FROM photos WHERE collection_id = ?)").run(id);
+    // 解除照片关联
+    d.prepare("UPDATE photos SET collection_id = NULL, sort_order = NULL WHERE collection_id = ?").run(id);
+    // 删除摄影集记录
+    d.prepare("DELETE FROM collections WHERE id = ?").run(id);
+  });
+
+  batch();
+  return true;
 }
 
 /**

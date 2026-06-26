@@ -34,6 +34,9 @@ interface Props {
   onBatchAddToCollection?: (collectionId: number) => void;
   /** 可选摄影集列表（仅 draft / ready） */
   batchAddCollections?: { id: number; title: string }[];
+  /** 批​​量移动到章节 */
+  chapters?: { id: number; title: string }[];
+  onBatchMoveToChapter?: (chapterId: number) => void;
 }
 
 export default function PhotoGrid({
@@ -44,11 +47,14 @@ export default function PhotoGrid({
   selectable, selectedIds, onSelectionChange,
   onBatchDelete, batchActionLabel,
   onBatchAddToCollection, batchAddCollections,
+  chapters, onBatchMoveToChapter,
 }: Props) {
   const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [loading, setLoading] = useState(!externalPhotos);
   const [showBatchImport, setShowBatchImport] = useState(false);
   const [batchCollectionId, setBatchCollectionId] = useState<number | null>(null);
+  const [showMoveToChapter, setShowMoveToChapter] = useState(false);
+  const [moveToChapterId, setMoveToChapterId] = useState<number | null>(null);
 
   useEffect(() => {
     if (externalPhotos) {
@@ -118,7 +124,48 @@ export default function PhotoGrid({
             </button>
 
             {/* 批量加入摄影集 */}
-            {onBatchAddToCollection && batchAddCollections && batchAddCollections.length > 0 && (
+            {onBatchAddToCollection && batchAddCollections && (
+              batchAddCollections.length === 0 ? (
+                showBatchImport ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-gray-400">暂无摄影集</span>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch("/api/collections", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ title: "未命名摄影集" }),
+                          });
+                          if (res.ok) {
+                            const col = await res.json();
+                            onBatchAddToCollection(col.id);
+                            setShowBatchImport(false);
+                          }
+                        } catch {
+                          // silently fail
+                        }
+                      }}
+                      className="text-[10px] px-2.5 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                    >
+                      创建摄影集
+                    </button>
+                    <button
+                      onClick={() => setShowBatchImport(false)}
+                      className="text-[10px] px-2.5 py-1 rounded text-gray-400 hover:text-gray-500 transition-colors"
+                    >
+                      取消
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowBatchImport(true)}
+                    className="text-[10px] px-2.5 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                  >
+                    加入摄影集
+                  </button>
+                )
+              ) : (
               showBatchImport ? (
                 <div className="flex items-center gap-1.5">
                   <select
@@ -162,6 +209,55 @@ export default function PhotoGrid({
                   className="text-[10px] px-2.5 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors"
                 >
                   加入摄影集
+                </button>
+              )
+            ))}
+
+            {/* 批量移动到章节 */}
+            {onBatchMoveToChapter && chapters && chapters.length > 0 && (
+              showMoveToChapter ? (
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={moveToChapterId ?? ""}
+                    onChange={(e) => setMoveToChapterId(Number(e.target.value))}
+                    className="text-[10px] border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-600"
+                  >
+                    <option value="" disabled>选择章节</option>
+                    {chapters.map((ch) => (
+                      <option key={ch.id} value={ch.id}>
+                        {ch.title}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => {
+                      if (moveToChapterId != null) {
+                        onBatchMoveToChapter(moveToChapterId);
+                        setShowMoveToChapter(false);
+                        setMoveToChapterId(null);
+                      }
+                    }}
+                    disabled={moveToChapterId == null}
+                    className="text-[10px] px-2 py-1 rounded bg-gray-800 text-white hover:bg-gray-900 disabled:opacity-30 disabled:cursor-default transition-colors"
+                  >
+                    确认
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMoveToChapter(false);
+                      setMoveToChapterId(null);
+                    }}
+                    className="text-[10px] px-2 py-1 rounded text-gray-400 hover:text-gray-500 transition-colors"
+                  >
+                    取消
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowMoveToChapter(true)}
+                  className="text-[10px] px-2.5 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                >
+                  移动到章节
                 </button>
               )
             )}

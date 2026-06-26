@@ -4,6 +4,7 @@
  */
 
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,15 +25,15 @@ export default function RootLayout({
           <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
             <h1 className="text-lg font-semibold tracking-tight">Photo Manager</h1>
             <nav className="flex items-center gap-4">
-              <a href="/" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
+              <Link href="/" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
                 首页
-              </a>
-              <a href="/collections" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
+              </Link>
+              <Link href="/collections" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
                 摄影集
-              </a>
-              <a href="/analytics" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
+              </Link>
+              <Link href="/analytics" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
                 统计分析
-              </a>
+              </Link>
               <span className="text-xs text-gray-400">MVP</span>
             </nav>
           </div>
